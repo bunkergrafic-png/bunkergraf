@@ -586,6 +586,12 @@ function abrirFormProducto(prod=null){
       if(isEdit) await db.collection('inventario').doc(prod.id).update(data);
       else await db.collection('inventario').add(data);
       closeModal();
+      if(!isEdit){
+        const otro=confirm('✅ Producto guardado.\n\n¿Deseas agregar otro producto?');
+        if(otro) abrirFormProducto();
+      } else {
+        alert('✅ Producto actualizado');
+      }
     }catch(e){alert('Error: '+e.message);}
   };
   $('pClose').onclick=closeModal;
