@@ -31,6 +31,23 @@ header nav button.active,header nav button:hover{background:var(--accent);color:
 .brand p{font-size:.64rem;color:var(--gray);}
 .ubadge{background:rgba(255,255,255,.15);border-radius:20px;padding:3px 9px;font-size:.7rem;color:#fff;margin-left:6px;cursor:pointer;white-space:nowrap;}
 .sync{font-size:.65rem;padding:3px 8px;}
+/* ── Menú hamburguesa móvil ── */
+#hambBtn{display:none;background:transparent;border:none;color:#fff;font-size:1.4rem;cursor:pointer;padding:4px 8px;margin-left:auto;}
+#mobileMenu{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;}
+#mobileMenuPanel{position:fixed;top:0;left:0;bottom:0;width:230px;background:var(--dark);padding:20px 14px;overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,.4);}
+#mobileMenuPanel .mbrand{font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;margin-bottom:4px;}
+#mobileMenuPanel .msub{font-size:.68rem;color:var(--gray);margin-bottom:20px;}
+#mobileMenuPanel button{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:none;color:#ccd;padding:11px 10px;border-radius:8px;cursor:pointer;font-size:.85rem;text-align:left;margin-bottom:3px;}
+#mobileMenuPanel button.active,#mobileMenuPanel button:hover{background:var(--accent);color:#fff;}
+#mobileMenuPanel .mdivider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:12px 0;}
+#mobileMenuPanel .mbadge{font-size:.7rem;color:rgba(255,255,255,.5);padding:4px 10px;}
+@media(max-width:700px){
+  header nav{display:none;}
+  #hambBtn{display:block;}
+  .ubadge#syncBadge{display:none;}
+  .ubadge#userBadge{display:none;}
+  .brand p{display:none;}
+}
 main{max-width:1080px;margin:0 auto;padding:14px 10px;}
 .bcv-bar{background:var(--mid);color:#fff;padding:7px 12px;font-size:.76rem;display:flex;align-items:center;gap:8px;border-radius:8px;margin-bottom:12px;flex-wrap:wrap;}
 .bcv-bar input{width:100px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 8px;border-radius:6px;font-size:.78rem;}
@@ -116,7 +133,19 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
   <span class="ubadge sync" id="syncBadge">⏳</span>
   <span class="ubadge" id="userBadge">–</span>
   <span class="ubadge" id="logoutBtn">Salir</span>
+  <button id="hambBtn">☰</button>
 </header>
+
+<!-- Menú móvil -->
+<div id="mobileMenu">
+  <div id="mobileMenuPanel">
+    <div class="mbrand">BUNKER GRÁFICO</div>
+    <div class="msub" id="mobileUserInfo">–</div>
+    <nav id="mobileNav"></nav>
+    <hr class="mdivider"/>
+    <button id="mobileLogout" style="color:#e74c3c">🚪 Cerrar sesión</button>
+  </div>
+</div>
 
 <main id="mainContent" style="display:none">
   <div class="bcv-bar">
@@ -475,6 +504,7 @@ function enterApp(){
   $('mainContent').style.display='block';
   $('userBadge').textContent=CU.name+' ('+(ROLES[CU.role]||CU.role)+')';
   $('headerRole').textContent=CU.email;
+  const mi=$('mobileUserInfo'); if(mi) mi.textContent=CU.name+' · '+CU.email;
   setSyncBadge('⏳ Cargando...');
   buildNav();
   attachListeners();
@@ -503,18 +533,33 @@ $('btnSaveBCV').addEventListener('click',async()=>{
 });
 
 function buildNav(){
-  const nav=$('mainNav');nav.innerHTML='';
+  const nav=$('mainNav'); nav.innerHTML='';
+  const mobileNav=$('mobileNav'); if(mobileNav) mobileNav.innerHTML='';
   NAV.forEach(n=>{
-    if(!CU.perms.includes(n.id))return;
-    const b=document.createElement('button');b.textContent=n.lbl;b.dataset.s=n.id;
-    b.addEventListener('click',()=>showSection(n.id));nav.appendChild(b);
+    if(!CU.perms.includes(n.id)) return;
+    // Desktop
+    const b=document.createElement('button'); b.textContent=n.lbl; b.dataset.s=n.id;
+    b.addEventListener('click',()=>showSection(n.id)); nav.appendChild(b);
+    // Móvil
+    if(mobileNav){
+      const bm=document.createElement('button'); bm.textContent=n.lbl; bm.dataset.s=n.id;
+      bm.addEventListener('click',()=>{closeMobileMenu();showSection(n.id);}); mobileNav.appendChild(bm);
+    }
   });
+  // Hamburguesa
+  const hamb=$('hambBtn');
+  if(hamb) hamb.onclick=()=>{ $('mobileMenu').style.display='flex'; };
+  const mm=$('mobileMenu');
+  if(mm) mm.addEventListener('click',e=>{ if(e.target===mm) closeMobileMenu(); });
+  const ml=$('mobileLogout');
+  if(ml) ml.onclick=doLogout;
   showSection(CU.perms[0]||'dashboard');
 }
+function closeMobileMenu(){ const mm=$('mobileMenu'); if(mm) mm.style.display='none'; }
 
 function showSection(id){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('#mainNav button').forEach(b=>b.classList.toggle('active',b.dataset.s===id));
+  document.querySelectorAll('#mainNav button, #mobileNav button').forEach(b=>b.classList.toggle('active',b.dataset.s===id));
   const s=$('sec-'+id);if(s)s.classList.add('active');
   if(id==='ventas') buildClientesList();
   if(id==='gastos'&&!gItemCnt) addGastoItem();
