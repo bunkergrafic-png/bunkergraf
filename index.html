@@ -1055,7 +1055,7 @@ function renderDashboard(){
   $('dashCards').innerHTML=`<div class="card green"><div class="lbl">Ventas mes</div><div class="val">€${tv.toFixed(2)}</div><div class="sub">${vM.length} pedido(s)</div></div><div class="card red"><div class="lbl">Gastos mes</div><div class="val">€${tg.toFixed(2)}</div><div class="sub">${gM.length} registro(s)</div></div><div class="card ${gan>=0?'green':'red'}"><div class="lbl">Ganancia</div><div class="val">€${gan.toFixed(2)}</div></div><div class="card yellow"><div class="lbl">Margen</div><div class="val">${mar.toFixed(1)}%</div></div><div class="card"><div class="lbl">Cotiz. pendientes</div><div class="val" style="color:var(--orange)">${cotizaciones.length}</div></div>`;
 
   const bajos=inventario.filter(i=>i.stockMin>0&&i.stock<=i.stockMin);
-  const al=$('alertasStock');if(al)al.innerHTML=bajos.length?`<div class="alert-low">⚠️ <strong>Stock bajo:</strong> ${bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad||''})`).join(' · ')}</div>`:'';
+  const al=$('alertasStock');if(al)al.innerHTML=bajos.length?`<div class="alert-low" onclick="showSection('inventario')" style="cursor:pointer" title="Ver inventario">⚠️ <strong>Stock bajo:</strong> ${bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad||''})`).join(' · ')} <span style="float:right;font-weight:700">Ver inventario →</span></div>`:'';
 
   const all=[...ventas,...gastos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,15);
   if(!all.length){$('dashTable').innerHTML='<div class="empty">Sin transacciones aún</div>';return;}
