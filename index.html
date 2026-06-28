@@ -649,6 +649,22 @@ function cargarDatosCliente(cli, ultimaVenta){
         }
       }
 
+      // ── Color tinta ───────────────────────────────────
+      if(it.tinta){
+        const ts=el.querySelector('[data-tintasel]');
+        if(ts){
+          const esDef=[...ts.options].find(o=>o.value===it.tinta);
+          if(esDef){ ts.value=it.tinta; }
+          else {
+            ts.value='_otro';
+            const tc=document.getElementById('iTintaOtro_'+id2);
+            if(tc) tc.style.display='block';
+            const tcu=el.querySelector('[data-tintacust]');
+            if(tcu) tcu.value=it.tinta;
+          }
+        }
+      }
+
       // ── Nota ──────────────────────────────────────────
       const ne=el.querySelector('[data-nota]');
       if(ne) ne.value=it.nota||'';
@@ -759,17 +775,33 @@ function addItem(){
     <strong style="font-size:.72rem">📊 Precio escalonado:</strong>
     <table id="iEscalaTable_${id}"></table>
   </div>
-  <div class="row r3">
-    <div><label>Color</label>
+  <div class="row r4">
+    <div><label>Color bolsa</label>
       <select data-colsel="${id}">
         ${COLORES_DEFAULT.map(c=>`<option>${c}</option>`).join('')}
-        <option value="_otro">Otro color...</option>
+        <option value="_otro">Otro...</option>
       </select>
     </div>
-    <div id="iColOtro_${id}" style="display:none"><label>Color personalizado</label><input data-colcust="${id}"/></div>
-    <div><label>Precio unitario (€)</label><input type="number" data-precio="${id}" step="0.01" placeholder="Auto" readonly style="background:#f0f4f6"/></div>
+    <div id="iColOtro_${id}" style="display:none"><label>Color bolsa (otro)</label><input data-colcust="${id}"/></div>
+    <div><label>Color tinta</label>
+      <select data-tintasel="${id}">
+        <option value="Dorada">Dorada</option>
+        <option value="Plateada">Plateada</option>
+        <option value="Negra">Negra</option>
+        <option value="Blanca">Blanca</option>
+        <option value="Roja">Roja</option>
+        <option value="Azul">Azul</option>
+        <option value="Verde">Verde</option>
+        <option value="Rosada">Rosada</option>
+        <option value="_otro">Otro...</option>
+      </select>
+    </div>
+    <div id="iTintaOtro_${id}" style="display:none"><label>Color tinta (otro)</label><input data-tintacust="${id}"/></div>
   </div>
-  <div class="row r1"><div><label>Nota (diseño, instrucciones...)</label><input data-nota="${id}"/></div></div>
+  <div class="row r3">
+    <div><label>Precio unitario (€)</label><input type="number" data-precio="${id}" step="0.01" placeholder="Auto" readonly style="background:#f0f4f6"/></div>
+    <div style="grid-column:span 2"><label>Nota (diseño, instrucciones...)</label><input data-nota="${id}"/></div>
+  </div>
   <div class="pbox" id="iprice_${id}" style="display:none;padding:6px">
     <span id="ieuro_${id}" style="font-weight:700;font-size:1rem"></span>
     <span id="ibs_${id}" style="color:var(--gray);font-size:.78rem;margin-left:6px"></span>
@@ -790,6 +822,7 @@ function addItem(){
     recalcItem(id);
   });
   div.querySelector('[data-colsel]').addEventListener('change',function(){const cc=document.getElementById('iColOtro_'+id);if(cc)cc.style.display=this.value==='_otro'?'block':'none';});
+  div.querySelector('[data-tintasel]').addEventListener('change',function(){const cc=document.getElementById('iTintaOtro_'+id);if(cc)cc.style.display=this.value==='_otro'?'block':'none';});
   div.querySelector('[data-cant]').addEventListener('input',()=>recalcItem(id));
   $('itemsContainer').appendChild(div);
 }
@@ -883,7 +916,8 @@ function getItems(){
       else{const p=inventario.find(x=>x.id===prodVal);desc=p?(p.nombre+(p.medida?' ('+p.medida+')':'')):(el.querySelector('[data-prod]')?.options[el.querySelector('[data-prod]')?.selectedIndex]?.text||'');}
     }
     const color=el.querySelector('[data-colsel]')?.value==='_otro'?el.querySelector('[data-colcust]')?.value||'':el.querySelector('[data-colsel]')?.value||'';
-    if(cant>0&&total>0)items.push({prodId:prodVal.startsWith('_')?'':prodVal,tamKey:tamKey||'',desc,cant,precio,color,nota:el.querySelector('[data-nota]')?.value||'',total});
+    const tinta=el.querySelector('[data-tintasel]')?.value==='_otro'?el.querySelector('[data-tintacust]')?.value||'':el.querySelector('[data-tintasel]')?.value||'';
+    if(cant>0&&total>0)items.push({prodId:prodVal.startsWith('_')?'':prodVal,tamKey:tamKey||'',desc,cant,precio,color,tinta,nota:el.querySelector('[data-nota]')?.value||'',total});
   });
   return items;
 }
@@ -978,7 +1012,7 @@ function editarCotiz(id){
 // ── WHATSAPP ──────────────────────────────────────────────
 function buildRecibo(v){
   const items=v.items||[];let det='';
-  items.forEach((it,i)=>{det+=`\n• ${it.desc||'Ítem '+(i+1)}${it.color&&it.color!=='Blanca'?' ('+it.color+')':''}: x${it.cant} — *€${it.total?.toFixed(2)||'–'}*${it.nota?'\n  _'+it.nota+'_':''}`;});
+  items.forEach((it,i)=>{det+=`\n• ${it.desc||'Ítem '+(i+1)}${it.color&&it.color!=='Blanca'?' – Bolsa '+it.color:''}${it.tinta?' – Tinta '+it.tinta+' 🎨':''}: x${it.cant} — *€${it.total?.toFixed(2)||'–'}*${it.nota?'\n  _'+it.nota+'_':''}`;});
   return `🖨️ *BUNKER GRÁFICO*\n📲 @bunkergraf | 📞 04244438937\n─────────────────────\n✅ *${v.tipo==='cotizacion'?'COTIZACIÓN':'PEDIDO CONFIRMADO'}*\n─────────────────────\n👤 ${v.cliente}${v.emprendimiento?'\n🏪 '+v.emprendimiento:''}${v.ig?'\n📸 '+v.ig:''}\n📅 ${fmtF(v.fecha)}\n\n📦 *Detalle:*${det}\n\n💶 *TOTAL: €${v.totalEuro?.toFixed(2)||'–'}*${v.totalBs?'\n💵 Bs '+v.totalBs?.toLocaleString('es-VE',{maximumFractionDigits:0}):''}${v.bcv?'\n💱 Tasa BCV: '+v.bcv+' Bs/€':''}\n\n📅 *Entrega: ${v.entregaStr||'–'}*${v.envio?'\n🚚 '+v.envio+(v.oficina?' – '+v.oficina:''):''}\n─────────────────────\n¡Gracias por elegirnos! 🙏`;
 }
 
