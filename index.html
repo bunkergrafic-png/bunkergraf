@@ -852,12 +852,30 @@ function buildVentaObj(tipo){
 }
 
 $('btnCotiz').addEventListener('click',async()=>{
+  if($('btnCotiz').disabled) return;
   const editId=g('ventaEditId'),obj=buildVentaObj('cotizacion');if(!obj)return;
-  try{if(editId){const prev=cotizaciones.find(c=>c.id===editId);await db.collection('cotizaciones').doc(editId).set({...obj,status:prev?.status||obj.status});}else{const ref=await db.collection('cotizaciones').add(obj);lastVenta={...obj,id:ref.id};}alert('📋 Cotización guardada');limpiarVentaForm();}catch(e){alert('Error: '+e.message);}
+  $('btnCotiz').disabled=true; $('btnVenta').disabled=true;
+  try{
+    if(editId){const prev=cotizaciones.find(c=>c.id===editId);await db.collection('cotizaciones').doc(editId).set({...obj,status:prev?.status||obj.status});}
+    else{const ref=await db.collection('cotizaciones').add(obj);lastVenta={...obj,id:ref.id};}
+    alert('📋 Cotización guardada');limpiarVentaForm();
+  }catch(e){alert('Error: '+e.message);}
+  finally{$('btnCotiz').disabled=false;$('btnVenta').disabled=false;}
 });
+
 $('btnVenta').addEventListener('click',async()=>{
+  if($('btnVenta').disabled) return;
   const obj=buildVentaObj('venta');if(!obj)return;
-  try{const ref=await db.collection('ventas').add(obj);lastVenta={...obj,id:ref.id};alert('✅ Venta registrada');limpiarVentaForm();}catch(e){alert('Error: '+e.message);}
+  $('btnCotiz').disabled=true; $('btnVenta').disabled=true;
+  try{
+    const ref=await db.collection('ventas').add(obj);
+    lastVenta={...obj,id:ref.id};
+    // Ofrecer editar en lugar de solo confirmar
+    const editar=confirm('✅ Venta registrada correctamente.\n\n¿Deseas revisar o editar esta venta antes de continuar?');
+    if(editar) openEditVenta(ref.id);
+    else limpiarVentaForm();
+  }catch(e){alert('Error: '+e.message);}
+  finally{$('btnCotiz').disabled=false;$('btnVenta').disabled=false;}
 });
 $('btnWA').addEventListener('click',()=>{if(!lastVenta){alert('Guarda primero.');return;}showWAModal(lastVenta);});
 
