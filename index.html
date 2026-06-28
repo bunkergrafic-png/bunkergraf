@@ -586,25 +586,81 @@ function mostrarSugerenciaCliente(cli){
 }
 
 function cargarDatosCliente(cli, ultimaVenta){
-  sv('vCliente',cli.nombre);sv('vEmprendimiento',cli.emprendimiento||'');sv('vInstagram',cli.instagram||cli.telefono||'');sv('vRif',cli.rif||'');sv('vCiudad',cli.ciudad||'');sv('vEnvio',cli.envio||'');sv('vOficina',cli.oficina||'');sv('vRecibeNombre',cli.recibeNombre||'');sv('vRecibeTelefono',cli.recibeTelefono||'');sv('vRecibeCI',cli.recibeCI||'');
+  // Datos del cliente
+  sv('vCliente',cli.nombre);
+  sv('vEmprendimiento',cli.emprendimiento||'');
+  sv('vInstagram',cli.instagram||cli.telefono||'');
+  sv('vRif',cli.rif||'');
+  sv('vCiudad',cli.ciudad||'');
+  sv('vEnvio',cli.envio||'');
+  sv('vOficina',cli.oficina||'');
+  sv('vRecibeNombre',cli.recibeNombre||'');
+  sv('vRecibeTelefono',cli.recibeTelefono||'');
+  sv('vRecibeCI',cli.recibeCI||'');
   $('cliSuggest').classList.remove('visible');
-  // Cargar ítems del último pedido
-  if(ultimaVenta&&ultimaVenta.items?.length){
-    $('itemsContainer').innerHTML='';itemCnt=0;
+
+  if(ultimaVenta && ultimaVenta.items?.length){
+    $('itemsContainer').innerHTML=''; itemCnt=0;
     ultimaVenta.items.forEach(it=>{
-      addItem();const id2=itemCnt;const el=$('item_'+id2);
+      addItem(); const id2=itemCnt;
+      const el=$('item_'+id2);
+
+      // ── Producto ──────────────────────────────────────
       const ps=el.querySelector('[data-prod]');
-      if(ps){const exists=inventario.find(x=>x.id===it.prodId);if(it.prodId&&exists)ps.value=it.prodId;else{ps.value='_libre';const lib=document.getElementById('iLibre_'+id2);if(lib)lib.style.display='block';const ld=el.querySelector('[data-libre]');if(ld)ld.value=it.desc||'';}}
-      const ce=el.querySelector('[data-cant]');if(ce)ce.value=it.cant;
-      const pe=el.querySelector('[data-precio]');if(pe)pe.value=it.precio;
-      const ne=el.querySelector('[data-nota]');if(ne)ne.value=it.nota||'';
-      // color
-      const cs=el.querySelector('[data-colsel]');if(cs&&it.color){const def=COLORES_DEFAULT.find(c=>c===it.color);if(def)cs.value=it.color;else{cs.value='_otro';const cc=document.getElementById('iColOtro_'+id2);if(cc)cc.style.display='block';const ccu=el.querySelector('[data-colcust]');if(ccu)ccu.value=it.color;}}
+      if(ps){
+        // Primero intentar por tamKey (bolsas principales)
+        if(it.tamKey){
+          ps.value='_bolsa_'+it.tamKey;
+          document.getElementById('iEscala_'+id2).style.display='block';
+        } else {
+          const exists=inventario.find(x=>x.id===it.prodId);
+          if(it.prodId && exists){
+            ps.value=it.prodId;
+          } else {
+            ps.value='_libre';
+            const lib=document.getElementById('iLibre_'+id2);
+            if(lib) lib.style.display='block';
+            const ld=el.querySelector('[data-libre]');
+            if(ld) ld.value=it.desc||'';
+          }
+        }
+        // Disparar change para activar lógica de precio readonly etc.
+        ps.dispatchEvent(new Event('change'));
+      }
+
+      // ── Cantidad ──────────────────────────────────────
+      const ce=el.querySelector('[data-cant]');
+      if(ce){ ce.value=it.cant; ce.dispatchEvent(new Event('input')); }
+
+      // ── Color ─────────────────────────────────────────
+      if(it.color){
+        const cs=el.querySelector('[data-colsel]');
+        if(cs){
+          const esDef=COLORES_DEFAULT.includes(it.color);
+          if(esDef){
+            cs.value=it.color;
+          } else {
+            cs.value='_otro';
+            const cc=document.getElementById('iColOtro_'+id2);
+            if(cc) cc.style.display='block';
+            const ccu=el.querySelector('[data-colcust]');
+            if(ccu) ccu.value=it.color;
+          }
+        }
+      }
+
+      // ── Nota ──────────────────────────────────────────
+      const ne=el.querySelector('[data-nota]');
+      if(ne) ne.value=it.nota||'';
+
+      // Recalcular precio después de todo
       recalcItem(id2);
     });
-    alert(`✅ Datos de ${cli.nombre} cargados con el último pedido.\nRevisa los ítems y ajusta cantidades si es necesario.`);
+
+    const fechaUltima=fmtF(ultimaVenta.fecha);
+    alert(`✅ Datos de ${cli.nombre} cargados.\n\n📦 Último pedido (${fechaUltima}):\n${ultimaVenta.items.map(it=>`• ${it.desc} x${it.cant}${it.color?' ('+it.color+')':''}`).join('\n')}\n\nTotal anterior: €${ultimaVenta.totalEuro?.toFixed(2)||'–'}\n\nRevisa y ajusta si el cliente quiere cambiar algo.`);
   } else {
-    alert(`✅ Datos de ${cli.nombre} cargados.\nNo hay pedidos previos — agrega los ítems manualmente.`);
+    alert(`✅ Datos de ${cli.nombre} cargados.\nEste cliente no tiene pedidos previos — agrega los ítems manualmente.`);
   }
 }
 
@@ -880,10 +936,17 @@ $('btnVenta').addEventListener('click',async()=>{
 $('btnWA').addEventListener('click',()=>{if(!lastVenta){alert('Guarda primero.');return;}showWAModal(lastVenta);});
 
 async function convertirAVenta(id){
-  if(!confirm('¿Confirmar pago?'))return;
+  if(!confirm('¿Confirmar pago y convertir a venta?'))return;
   const c=cotizaciones.find(x=>x.id===id);if(!c)return;
+  // Verificar que no exista ya una venta con el mismo origen
+  const yaExiste=ventas.find(v=>v.origenCotizId===id);
+  if(yaExiste){alert('⚠️ Esta cotización ya fue convertida a venta anteriormente.');return;}
   const{id:_,...rest}=c;
-  try{await db.collection('ventas').add({...rest,tipo:'venta',fechaPago:new Date().toISOString()});await db.collection('cotizaciones').doc(id).delete();alert('✅ Pago confirmado');}catch(e){alert('Error: '+e.message);}
+  try{
+    await db.collection('ventas').add({...rest,tipo:'venta',fechaPago:new Date().toISOString(),origenCotizId:id});
+    await db.collection('cotizaciones').doc(id).delete();
+    alert('✅ Pago confirmado. Venta registrada.');
+  }catch(e){alert('Error: '+e.message);}
 }
 function autoRegCliente(){
   const nombre=g('vCliente').trim();if(!nombre)return;
