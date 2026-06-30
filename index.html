@@ -1459,11 +1459,20 @@ function stopAlarmLoop(){
   $('btnTimerStart').textContent='▶️ Iniciar';
   $('btnTimerPause').style.display='none';
   if(timerRemaining<0){
-    $('timerStatus').innerHTML=`✅ Alarma detenida. <strong style="color:var(--red)">Te excediste por ${fmtTimer(Math.abs(timerRemaining)).replace('-','')}</strong>`;
+    const excesoSeg = Math.abs(timerRemaining);
+    const totalRealSeg = timerTotal + excesoSeg;
+    $('timerStatus').innerHTML=`✅ Insolación finalizada<br>
+      <span style="font-size:.78rem;display:inline-block;margin-top:6px;line-height:1.6">
+      ⏱️ Tiempo programado: <strong>${fmtTimer(timerTotal)}</strong><br>
+      ⚠️ Exceso por descuido: <strong style="color:var(--red)">+${fmtTimer(excesoSeg)}</strong><br>
+      🔆 <strong>Tiempo TOTAL de exposición: ${fmtTimer(totalRealSeg)}</strong>
+      </span>`;
   } else {
-    $('timerStatus').textContent='✅ Alarma detenida. Tiempo completado.';
+    $('timerStatus').innerHTML=`✅ Insolación finalizada en el tiempo exacto<br>
+      <span style="font-size:.78rem;display:inline-block;margin-top:6px">🔆 <strong>Tiempo total de exposición: ${fmtTimer(timerTotal)}</strong></span>`;
   }
-  $('timerStatus').style.color='var(--green)';
+  $('timerStatus').style.color='var(--dark)';
+  $('timerStatus').style.fontWeight='400';
 }
 
 $('btnStopAlarm').addEventListener('click', stopAlarmLoop);
