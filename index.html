@@ -1493,6 +1493,13 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(reg=>console.log('SW registrado:',reg.scope)).catch(err=>console.warn('SW error:',err));
   });
 }
+
+// ── Copiar logo del login al header (evita duplicar el base64) ──
+(function syncHeaderLogo(){
+  const loginImg = document.querySelector('#loginScreen img');
+  const headerImg = document.getElementById('headerLogo');
+  if (loginImg && headerImg) headerImg.src = loginImg.src;
+})();
 </script>
 </body>
 </html>
