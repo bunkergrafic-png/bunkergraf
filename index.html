@@ -4,10 +4,6 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Bunker Gráfico</title>
-<link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#1e2d38"/>
-<link rel="icon" type="image/png" href="icon-512.png"/>
-<link rel="apple-touch-icon" href="icon-512.png"/>
 <style>
 :root{--dark:#1e2d38;--mid:#2d4455;--accent:#3d6475;--gray:#8a9ba8;--light:#f0f4f6;--green:#27ae60;--red:#e74c3c;--yellow:#f39c12;--blue:#2980b9;--orange:#e67e22;--border:#dde3e7;}
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif;}
@@ -27,9 +23,6 @@ body{background:#f0f4f6;color:#1e2d38;min-height:100vh;}
 .lerr{color:#e74c3c;font-size:.75rem;margin-top:6px;display:none;}
 .spin{display:inline-block;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.85;transform:scale(1.04);}}
-@keyframes flashBg{0%,100%{background-color:#fff;}50%{background-color:#fde8e8;}}
-.timer-alarming{animation:flashBg 0.6s infinite;}
 header{background:var(--dark);color:#fff;padding:9px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);}
 header nav{margin-left:auto;display:flex;gap:3px;flex-wrap:wrap;}
 header nav button{background:transparent;border:none;color:#aac;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.7rem;}
@@ -46,8 +39,6 @@ header nav button.active,header nav button:hover{background:var(--accent);color:
 #mobileMenuPanel button.active,#mobileMenuPanel button:hover{background:var(--accent);color:#fff;}
 #mobileMenuPanel .mdivider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:12px 0;}
 main{max-width:1080px;margin:0 auto;padding:14px 10px;}
-#offlineBanner{display:none;background:#f39c12;color:#fff;text-align:center;padding:8px 14px;font-size:.8rem;font-weight:600;position:sticky;top:0;z-index:99;}
-#offlineBanner.show{display:block;}
 .bcv-bar{background:var(--mid);color:#fff;padding:7px 12px;font-size:.76rem;display:flex;align-items:center;gap:8px;border-radius:8px;margin-bottom:12px;flex-wrap:wrap;}
 .bcv-bar input{width:100px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 8px;border-radius:6px;font-size:.78rem;}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-bottom:14px;}
@@ -169,7 +160,6 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
 </div>
 
 <main id="mainContent" style="display:none">
-  <div id="offlineBanner">📡 Sin conexión a internet — trabajando con datos locales. Los cambios se sincronizarán automáticamente al recuperar la señal.</div>
   <div class="bcv-bar">
     💱 Tasa BCV (Bs/€):
     <input type="number" id="tasaBCV" placeholder="57.30" step="0.01"/>
@@ -180,7 +170,6 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
   <!-- DASHBOARD -->
   <div id="sec-dashboard" class="section active">
     <div id="alertaPedidos"></div>
-    <div id="alertaRecordatoriosHoy"></div>
     <div class="cards" id="dashCards"></div>
     <div id="alertasStock"></div>
     <div class="fb"><h2>📋 Últimas transacciones</h2><div id="dashTable"></div></div>
@@ -379,54 +368,6 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
     <div id="reporteContent"></div>
   </div>
 
-  <!-- HERRAMIENTAS -->
-  <div id="sec-herramientas" class="section">
-    <div class="fb">
-      <h2>⏱️ Cronómetro de Insolación</h2>
-      <div class="info-note">Configura el tiempo de exposición a la lámpara y presiona Iniciar. Sonará una alarma cuando termine.</div>
-
-      <div style="text-align:center;margin:20px 0">
-        <div id="timerDisplay" style="font-size:4rem;font-weight:800;color:var(--dark);font-family:monospace;letter-spacing:2px">01:30</div>
-        <div id="timerStatus" style="font-size:.85rem;color:var(--gray);margin-top:4px">Listo para iniciar</div>
-      </div>
-
-      <div class="row r1" id="timerConfigRow" style="max-width:320px;margin:0 auto 16px">
-        <div class="row r3" style="align-items:end">
-          <div><label>Minutos</label><input type="number" id="timerMin" min="0" max="59" value="1"/></div>
-          <div><label>Segundos</label><input type="number" id="timerSec" min="0" max="59" value="30"/></div>
-          <div>
-            <label>Presets</label>
-            <select id="timerPresets">
-              <option value="">– Elegir –</option>
-              <option value="60">1:00</option>
-              <option value="90">1:30</option>
-              <option value="120">2:00</option>
-              <option value="150">2:30</option>
-              <option value="180">3:00</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-s" id="btnTimerStart" style="padding:12px 28px;font-size:1rem">▶️ Iniciar</button>
-        <button class="btn btn-w" id="btnTimerPause" style="padding:12px 28px;font-size:1rem;display:none">⏸️ Pausar</button>
-        <button class="btn btn-d" id="btnTimerReset" style="padding:12px 28px;font-size:1rem">🔄 Reiniciar</button>
-        <button class="btn" id="btnStopAlarm" style="padding:12px 28px;font-size:1rem;display:none;background:#e74c3c;color:#fff;animation:pulse 1s infinite">🔇 DETENER ALARMA</button>
-      </div>
-
-      <div style="text-align:center;margin-top:16px">
-        <div class="pb" style="height:10px;max-width:500px;margin:0 auto"><div class="pf" id="timerProgressBar" style="width:0%;background:var(--green);height:10px"></div></div>
-      </div>
-
-      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
-        <label style="display:inline-flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer">
-          <input type="checkbox" id="timerSoundToggle" checked style="width:auto"/> 🔊 Sonido de alarma activado
-        </label>
-      </div>
-    </div>
-  </div>
-
   <!-- USUARIOS -->
   <div id="sec-usuarios" class="section">
     <div class="fb">
@@ -454,36 +395,6 @@ const firebaseConfig={apiKey:"AIzaSyClR8OjrkTE9Exq5vyTMSC-rbzY_mwh1xA",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(), db=firebase.firestore();
 
-// ── PERSISTENCIA OFFLINE ──────────────────────────────────
-// Permite que la app funcione sin internet usando datos en caché,
-// y sincroniza automáticamente al recuperar la conexión.
-db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-  if (err.code === 'failed-precondition') {
-    console.warn('Persistencia offline: solo se puede activar en una pestaña a la vez.');
-  } else if (err.code === 'unimplemented') {
-    console.warn('Persistencia offline no soportada en este navegador.');
-  }
-});
-
-// ── DETECCIÓN DE ESTADO DE CONEXIÓN ───────────────────────
-let isOnline = navigator.onLine;
-window.addEventListener('online', () => { isOnline = true; updateConnectionBadge(); updateOfflineBanner(); });
-window.addEventListener('offline', () => { isOnline = false; updateConnectionBadge(); updateOfflineBanner(); });
-
-function updateConnectionBadge() {
-  const b = $('syncBadge');
-  if (!b) return;
-  if (!isOnline) {
-    b.textContent = '🔴 Sin internet (modo local)';
-    b.style.background = 'rgba(231,76,60,.35)';
-  }
-}
-function updateOfflineBanner() {
-  const banner = $('offlineBanner');
-  if (!banner) return;
-  banner.classList.toggle('show', !isOnline);
-}
-
 // ── CONSTANTES ────────────────────────────────────────────
 const ROLES={owner:'Propietario',admin:'Administrador',operator:'Operador',seller:'Vendedor'};
 const RPERMS={
@@ -492,8 +403,8 @@ const RPERMS={
   operator:['pedidos','historial'],
   seller: ['ventas','pedidos','clientes']
 };
-const ALL_MODS=[{id:'dashboard',lbl:'Dashboard'},{id:'ventas',lbl:'Ventas'},{id:'gastos',lbl:'Gastos'},{id:'inventario',lbl:'Inventario'},{id:'historial',lbl:'Historial'},{id:'pedidos',lbl:'Pedidos'},{id:'clientes',lbl:'Clientes'},{id:'recordatorios',lbl:'Recordatorios'},{id:'reportes',lbl:'Reportes'},{id:'herramientas',lbl:'Herramientas'},{id:'usuarios',lbl:'Usuarios'}];
-const NAV=[{id:'dashboard',lbl:'📊 Dashboard'},{id:'ventas',lbl:'🛍️ Ventas'},{id:'gastos',lbl:'💸 Gastos'},{id:'inventario',lbl:'📦 Inventario'},{id:'historial',lbl:'📋 Historial'},{id:'pedidos',lbl:'🧾 Pedidos'},{id:'clientes',lbl:'👥 Clientes'},{id:'recordatorios',lbl:'🔔 Recordatorios'},{id:'reportes',lbl:'📄 Reportes'},{id:'herramientas',lbl:'🛠️ Herramientas'},{id:'usuarios',lbl:'🔐 Usuarios'}];
+const ALL_MODS=[{id:'dashboard',lbl:'Dashboard'},{id:'ventas',lbl:'Ventas'},{id:'gastos',lbl:'Gastos'},{id:'inventario',lbl:'Inventario'},{id:'historial',lbl:'Historial'},{id:'pedidos',lbl:'Pedidos'},{id:'clientes',lbl:'Clientes'},{id:'recordatorios',lbl:'Recordatorios'},{id:'reportes',lbl:'Reportes'},{id:'usuarios',lbl:'Usuarios'}];
+const NAV=[{id:'dashboard',lbl:'📊 Dashboard'},{id:'ventas',lbl:'🛍️ Ventas'},{id:'gastos',lbl:'💸 Gastos'},{id:'inventario',lbl:'📦 Inventario'},{id:'historial',lbl:'📋 Historial'},{id:'pedidos',lbl:'🧾 Pedidos'},{id:'clientes',lbl:'👥 Clientes'},{id:'recordatorios',lbl:'🔔 Recordatorios'},{id:'reportes',lbl:'📄 Reportes'},{id:'usuarios',lbl:'🔐 Usuarios'}];
 const KNOWN_UIDS={'Mjz6kzVNvpPruDX6rYrXbfMkEdr1':{role:'owner',name:'Propietario'},'TOvDN7tPHNRScI8I1p4uIsn9AcB3':{role:'admin',name:'Administrador'},'3GFnDeCeSAQ2R7797qYTqTjdePN2':{role:'operator',name:'Operador Taller'},'ionMPMH6IBc0nYSGl2mimlHNVgn1':{role:'seller',name:'Vendedor'}};
 const FERIADOS=['01-01','01-06','02-24','02-25','03-19','04-14','04-17','04-18','04-19','05-01','06-24','06-29','07-05','07-24','10-12','11-01','12-08','12-24','12-25','12-31'];
 const STEPS=['Diseño digital','Aprobación cliente','Impresión positivo','Revelado bastidor','Estampado','Limpieza y empaque','Entrega / Envío'];
@@ -583,17 +494,16 @@ function enterApp(){
   $('headerRole').textContent=CU.email;
   const mi=$('mobileUserInfo');if(mi)mi.textContent=CU.name+' · '+CU.email;
   setSyncBadge('⏳');buildNav();attachListeners();
-  updateOfflineBanner();
 }
 
 function attachListeners(){
-  const ok=()=>{ if(isOnline) setSyncBadge('🟢 En línea','rgba(39,174,96,.3)'); else setSyncBadge('🟡 Datos en caché (sin internet)','rgba(243,156,18,.35)'); };
-  const err=()=>{ setSyncBadge('🔴 Sin conexión','rgba(231,76,60,.3)'); };
-  unsubs.push(db.collection('ventas').orderBy('fecha','desc').onSnapshot({includeMetadataChanges:true}, s=>{ventas=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('cotizaciones').orderBy('fecha','desc').onSnapshot({includeMetadataChanges:true}, s=>{cotizaciones=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('gastos').orderBy('fecha','desc').onSnapshot({includeMetadataChanges:true}, s=>{gastos=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('clientes').onSnapshot({includeMetadataChanges:true}, s=>{clientes=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('inventario').onSnapshot({includeMetadataChanges:true}, s=>{inventario=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  const ok=()=>setSyncBadge('🟢 En línea','rgba(39,174,96,.3)');
+  const err=()=>setSyncBadge('🔴 Sin conexión','rgba(231,76,60,.3)');
+  unsubs.push(db.collection('ventas').orderBy('fecha','desc').onSnapshot(s=>{ventas=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('cotizaciones').orderBy('fecha','desc').onSnapshot(s=>{cotizaciones=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('gastos').orderBy('fecha','desc').onSnapshot(s=>{gastos=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('clientes').onSnapshot(s=>{clientes=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('inventario').onSnapshot(s=>{inventario=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
   if(CU.perms.includes('usuarios'))unsubs.push(db.collection('usuarios').onSnapshot(s=>{usuariosDB=s.docs.map(d=>({...d.data(),id:d.id}));renderUsuarios();},err));
   unsubs.push(db.collection('config').doc('bcv').onSnapshot(d=>{if(d.exists){const data=d.data();if(document.activeElement!==$('tasaBCV'))sv('tasaBCV',data.tasa||'');if(data.fecha)$('bcvFecha').textContent='Act.: '+data.fecha;}},err));
 }
@@ -603,11 +513,8 @@ $('btnSaveBCV').addEventListener('click',async()=>{const v=g('tasaBCV'),f=new Da
 function buildNav(){
   const nav=$('mainNav');nav.innerHTML='';
   const mobileNav=$('mobileNav');if(mobileNav)mobileNav.innerHTML='';
-  // "herramientas" siempre visible para todos los usuarios autenticados,
-  // sin depender de los permisos guardados en Firebase
-  const perms=[...(CU.perms||[]), 'herramientas'];
   NAV.forEach(n=>{
-    if(!perms.includes(n.id))return;
+    if(!CU.perms.includes(n.id))return;
     const b=document.createElement('button');b.textContent=n.lbl;b.dataset.s=n.id;b.addEventListener('click',()=>showSection(n.id));nav.appendChild(b);
     if(mobileNav){const bm=document.createElement('button');bm.textContent=n.lbl;bm.dataset.s=n.id;bm.addEventListener('click',()=>{closeMobileMenu();showSection(n.id);});mobileNav.appendChild(bm);}
   });
@@ -1176,38 +1083,6 @@ function renderRecordatorios(){
   }));
 }
 
-// ── PANEL DIARIO DE RECORDATORIOS (Dashboard) ─────────────
-function getClientesParaRecordar(){
-  const DIAS_ALERTA=30;
-  const ahora=Date.now();
-  return clientes.map(cli=>{
-    const vCli=[...ventas].filter(v=>v.cliente?.toLowerCase()===cli.nombre?.toLowerCase()).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
-    const ultima=vCli[0];
-    if(!ultima)return null;
-    const dias=Math.floor((ahora-new Date(ultima.fecha))/(1000*60*60*24));
-    return{cli,ultima,dias};
-  }).filter(x=>x&&x.dias>=DIAS_ALERTA).sort((a,b)=>b.dias-a.dias);
-}
-
-function renderRecordatoriosHoy(){
-  const el=$('alertaRecordatoriosHoy');
-  if(!el) return;
-  if(!CU.perms.includes('recordatorios')){ el.innerHTML=''; return; }
-  const lista=getClientesParaRecordar();
-  if(!lista.length){ el.innerHTML=''; return; }
-  const urgentes=lista.filter(x=>x.dias>=60).length;
-  el.innerHTML=`<div onclick="showSection('recordatorios')" style="cursor:pointer;background:#fff8e1;border:1px solid #f39c12;border-radius:11px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.07)" onmouseover="this.style.background='#fff3cd'" onmouseout="this.style.background='#fff8e1'">
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="background:#f39c12;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;color:#fff">🔔</div>
-      <div>
-        <div style="font-size:1rem;font-weight:700;color:#8a6000">${lista.length} cliente${lista.length>1?'s':''} para recordatorio hoy${urgentes?` <span style="color:var(--red)">(${urgentes} urgente${urgentes>1?'s':''})</span>`:''}</div>
-        <div style="font-size:.75rem;color:#a08030;margin-top:2px">${lista.slice(0,3).map(x=>x.cli.nombre).join(', ')}${lista.length>3?' y '+(lista.length-3)+' más...':''}</div>
-      </div>
-    </div>
-    <div style="font-size:.78rem;color:#a08030;white-space:nowrap">Ver recordatorios →</div>
-  </div>`;
-}
-
 // ── GASTOS ────────────────────────────────────────────────
 function addGastoItem(){
   gItemCnt++;const id=gItemCnt;
@@ -1292,9 +1167,6 @@ function renderDashboard(){
   }
 
   $('dashCards').innerHTML=`<div class="card green"><div class="lbl">Ventas mes</div><div class="val">€${tv.toFixed(2)}</div><div class="sub">${vM.length} pedido(s)</div></div><div class="card red"><div class="lbl">Gastos mes</div><div class="val">€${tg.toFixed(2)}</div><div class="sub">${gM.length} registro(s)</div></div><div class="card ${gan>=0?'green':'red'}"><div class="lbl">Ganancia</div><div class="val">€${gan.toFixed(2)}</div></div><div class="card yellow"><div class="lbl">Margen</div><div class="val">${mar.toFixed(1)}%</div></div><div class="card"><div class="lbl">Cotiz. pendientes</div><div class="val" style="color:var(--orange)">${cotizaciones.length}</div></div>`;
-
-  // ── Panel de recordatorios pendientes hoy ──
-  renderRecordatoriosHoy();
 
   const bajos=inventario.filter(i=>i.stockMin>0&&i.stock<=i.stockMin);
   const al=$('alertasStock');if(al)al.innerHTML=bajos.length?`<div class="alert-low" onclick="showSection('inventario')" style="cursor:pointer" title="Ver inventario">⚠️ <strong>Stock bajo:</strong> ${bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad||''})`).join(' · ')} <span style="float:right;font-weight:700">Ver inventario →</span></div>`:'';
@@ -1457,200 +1329,6 @@ function editUsuario(id){
   $('euS').onclick=async()=>{const upd={name:$('eu_n').value.trim()};const nr=g('eu_r');if(nr)upd.role=nr;const perms=getPerms('eu');if(perms.length)upd.perms=perms;try{await db.collection('usuarios').doc(id).update(upd);closeModal();alert('✅ Actualizado');}catch(e){alert('Error: '+e.message);}};
   $('euC').onclick=closeModal;
 }
-
-// ── REGISTRO DEL SERVICE WORKER (modo offline) ────────────
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('Service Worker registrado:', reg.scope))
-      .catch(err => console.warn('Error registrando Service Worker:', err));
-  });
-}
-
-// ── CRONÓMETRO DE INSOLACIÓN ──────────────────────────────
-let timerInterval=null, timerRemaining=90, timerTotal=90, timerRunning=false, audioCtx=null;
-let alarmInterval=null, alarmActive=false;
-
-function fmtTimer(s){
-  const neg = s < 0;
-  const abs = Math.abs(s);
-  const m=Math.floor(abs/60), sec=abs%60;
-  return (neg?'-':'')+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
-}
-function updateTimerDisplay(){
-  $('timerDisplay').textContent=fmtTimer(timerRemaining);
-  const pct=timerTotal>0?Math.min(100,((timerTotal-timerRemaining)/timerTotal)*100):0;
-  $('timerProgressBar').style.width=pct+'%';
-  if(timerRemaining<0){
-    $('timerDisplay').style.color='var(--red)';
-    $('timerProgressBar').style.background='var(--red)';
-  } else if(timerRemaining<=10&&timerRemaining>0){
-    $('timerDisplay').style.color='var(--red)';
-    $('timerProgressBar').style.background='var(--green)';
-  } else {
-    $('timerDisplay').style.color='var(--dark)';
-    $('timerProgressBar').style.background='var(--green)';
-  }
-}
-
-function playSingleBeepPair(){
-  try{
-    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended') audioCtx.resume();
-    const playBeep=(freq,startTime,duration)=>{
-      const osc=audioCtx.createOscillator();
-      const gain=audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.frequency.value=freq; osc.type='sine';
-      gain.gain.setValueAtTime(0.35, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime+duration);
-      osc.start(startTime); osc.stop(startTime+duration);
-    };
-    const now=audioCtx.currentTime;
-    playBeep(880, now, 0.28);
-    playBeep(660, now+0.18, 0.25);
-  }catch(e){console.warn('Audio error:',e);}
-}
-
-function startAlarmLoop(){
-  if(!$('timerSoundToggle').checked) return;
-  alarmActive=true;
-  // Primer sonido inmediato
-  playSingleBeepPair();
-  // Repetir cada 700ms hasta que se detenga manualmente
-  alarmInterval=setInterval(()=>{
-    if(!alarmActive){clearInterval(alarmInterval);alarmInterval=null;return;}
-    playSingleBeepPair();
-  },700);
-  // Vibración en móviles si está disponible
-  if(navigator.vibrate){
-    try{ navigator.vibrate([300,150,300,150,300]); }catch(e){}
-  }
-  // Flash visual en la pantalla
-  document.body.classList.add('timer-alarming');
-  $('btnStopAlarm').style.display='inline-block';
-}
-
-function stopAlarmLoop(){
-  alarmActive=false;
-  if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}
-  document.body.classList.remove('timer-alarming');
-  $('btnStopAlarm').style.display='none';
-  // Al detener la alarma, también detenemos el conteo negativo
-  clearInterval(timerInterval); timerInterval=null; timerRunning=false;
-  $('btnTimerStart').style.display='inline-block';
-  $('btnTimerStart').textContent='▶️ Iniciar';
-  $('btnTimerPause').style.display='none';
-  if(timerRemaining<0){
-    const excesoSeg = Math.abs(timerRemaining);
-    const totalRealSeg = timerTotal + excesoSeg;
-    $('timerStatus').innerHTML=`✅ Insolación finalizada<br>
-      <span style="font-size:.78rem;display:inline-block;margin-top:6px;line-height:1.6">
-      ⏱️ Tiempo programado: <strong>${fmtTimer(timerTotal)}</strong><br>
-      ⚠️ Exceso por descuido: <strong style="color:var(--red)">+${fmtTimer(excesoSeg)}</strong><br>
-      🔆 <strong>Tiempo TOTAL de exposición: ${fmtTimer(totalRealSeg)}</strong>
-      </span>`;
-  } else {
-    $('timerStatus').innerHTML=`✅ Insolación finalizada en el tiempo exacto<br>
-      <span style="font-size:.78rem;display:inline-block;margin-top:6px">🔆 <strong>Tiempo total de exposición: ${fmtTimer(timerTotal)}</strong></span>`;
-  }
-  $('timerStatus').style.color='var(--dark)';
-  $('timerStatus').style.fontWeight='400';
-}
-
-$('btnStopAlarm').addEventListener('click', stopAlarmLoop);
-
-function timerTick(){
-  const wasPositive = timerRemaining > 0;
-  timerRemaining--;
-  updateTimerDisplay();
-  // Justo al cruzar de positivo a cero/negativo: disparar alarma una sola vez
-  if(wasPositive && timerRemaining<=0){
-    $('timerStatus').textContent='🚨 ¡TIEMPO COMPLETADO! Apaga la lámpara y detén la alarma.';
-    $('timerStatus').style.color='var(--red)';
-    $('timerStatus').style.fontWeight='700';
-    startAlarmLoop();
-  }
-  // Mientras esté en negativo y la alarma activa, mostrar tiempo de exceso
-  if(timerRemaining<0 && alarmActive){
-    $('timerStatus').textContent=`🚨 ¡TIEMPO EXCEDIDO POR ${fmtTimer(Math.abs(timerRemaining)).replace('-','')}! Detén la alarma.`;
-  }
-}
-
-function getConfiguredSeconds(){
-  const min=parseInt($('timerMin').value)||0;
-  const sec=parseInt($('timerSec').value)||0;
-  return Math.max(1, min*60+sec);
-}
-
-$('timerMin').addEventListener('input',()=>{ if(!timerRunning){ timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal; updateTimerDisplay(); $('timerPresets').value=''; }});
-$('timerSec').addEventListener('input',()=>{ if(!timerRunning){ timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal; updateTimerDisplay(); $('timerPresets').value=''; }});
-$('timerPresets').addEventListener('change',function(){
-  if(!this.value||timerRunning) return;
-  const total=parseInt(this.value);
-  sv('timerMin', Math.floor(total/60));
-  sv('timerSec', total%60);
-  timerTotal=total; timerRemaining=total;
-  updateTimerDisplay();
-});
-
-$('btnTimerStart').addEventListener('click',()=>{
-  if(timerRunning) return;
-  // Desbloquear audio en móviles (requiere interacción del usuario)
-  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
-  stopAlarmLoopSilent();
-  if(timerRemaining<=0||timerRemaining===timerTotal){
-    timerTotal=getConfiguredSeconds();
-    timerRemaining=timerTotal;
-  }
-  timerRunning=true;
-  $('timerStatus').textContent='🔥 Insolando... no apagues la lámpara';
-  $('timerStatus').style.color='var(--orange)';
-  $('timerStatus').style.fontWeight='700';
-  $('btnTimerStart').style.display='none';
-  $('btnTimerPause').style.display='inline-block';
-  $('timerConfigRow').style.opacity='0.5';
-  $('timerMin').disabled=true; $('timerSec').disabled=true; $('timerPresets').disabled=true;
-  updateTimerDisplay();
-  timerInterval=setInterval(timerTick,1000);
-});
-
-$('btnTimerPause').addEventListener('click',()=>{
-  clearInterval(timerInterval); timerInterval=null; timerRunning=false;
-  $('timerStatus').textContent='⏸️ Pausado';
-  $('timerStatus').style.color='var(--gray)';
-  $('btnTimerStart').style.display='inline-block';
-  $('btnTimerStart').textContent='▶️ Continuar';
-  $('btnTimerPause').style.display='none';
-});
-
-$('btnTimerReset').addEventListener('click',()=>{
-  clearInterval(timerInterval); timerInterval=null; timerRunning=false;
-  stopAlarmLoopSilent();
-  timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal;
-  $('timerProgressBar').style.background='var(--green)';
-  updateTimerDisplay();
-  $('timerStatus').textContent='Listo para iniciar';
-  $('timerStatus').style.color='var(--gray)';
-  $('timerStatus').style.fontWeight='400';
-  $('btnTimerStart').style.display='inline-block';
-  $('btnTimerStart').textContent='▶️ Iniciar';
-  $('btnTimerPause').style.display='none';
-  $('timerConfigRow').style.opacity='1';
-  $('timerMin').disabled=false; $('timerSec').disabled=false; $('timerPresets').disabled=false;
-});
-
-function stopAlarmLoopSilent(){
-  // Igual que stopAlarmLoop pero sin mensajes, usado al reiniciar
-  alarmActive=false;
-  if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}
-  document.body.classList.remove('timer-alarming');
-  $('btnStopAlarm').style.display='none';
-}
-
-// Inicializar display al cargar
-updateTimerDisplay();
 </script>
 </body>
 </html>
