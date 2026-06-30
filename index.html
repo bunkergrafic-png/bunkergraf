@@ -368,6 +368,53 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
     <div id="reporteContent"></div>
   </div>
 
+  <!-- HERRAMIENTAS -->
+  <div id="sec-herramientas" class="section">
+    <div class="fb">
+      <h2>⏱️ Cronómetro de Insolación</h2>
+      <div class="info-note">Configura el tiempo de exposición a la lámpara y presiona Iniciar. Sonará una alarma cuando termine.</div>
+
+      <div style="text-align:center;margin:20px 0">
+        <div id="timerDisplay" style="font-size:4rem;font-weight:800;color:var(--dark);font-family:monospace;letter-spacing:2px">01:30</div>
+        <div id="timerStatus" style="font-size:.85rem;color:var(--gray);margin-top:4px">Listo para iniciar</div>
+      </div>
+
+      <div class="row r1" id="timerConfigRow" style="max-width:320px;margin:0 auto 16px">
+        <div class="row r3" style="align-items:end">
+          <div><label>Minutos</label><input type="number" id="timerMin" min="0" max="59" value="1"/></div>
+          <div><label>Segundos</label><input type="number" id="timerSec" min="0" max="59" value="30"/></div>
+          <div>
+            <label>Presets</label>
+            <select id="timerPresets">
+              <option value="">– Elegir –</option>
+              <option value="60">1:00</option>
+              <option value="90">1:30</option>
+              <option value="120">2:00</option>
+              <option value="150">2:30</option>
+              <option value="180">3:00</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-s" id="btnTimerStart" style="padding:12px 28px;font-size:1rem">▶️ Iniciar</button>
+        <button class="btn btn-w" id="btnTimerPause" style="padding:12px 28px;font-size:1rem;display:none">⏸️ Pausar</button>
+        <button class="btn btn-d" id="btnTimerReset" style="padding:12px 28px;font-size:1rem">🔄 Reiniciar</button>
+      </div>
+
+      <div style="text-align:center;margin-top:16px">
+        <div class="pb" style="height:10px;max-width:500px;margin:0 auto"><div class="pf" id="timerProgressBar" style="width:0%;background:var(--green);height:10px"></div></div>
+      </div>
+
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer">
+          <input type="checkbox" id="timerSoundToggle" checked style="width:auto"/> 🔊 Sonido de alarma activado
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- USUARIOS -->
   <div id="sec-usuarios" class="section">
     <div class="fb">
@@ -403,8 +450,8 @@ const RPERMS={
   operator:['pedidos','historial'],
   seller: ['ventas','pedidos','clientes']
 };
-const ALL_MODS=[{id:'dashboard',lbl:'Dashboard'},{id:'ventas',lbl:'Ventas'},{id:'gastos',lbl:'Gastos'},{id:'inventario',lbl:'Inventario'},{id:'historial',lbl:'Historial'},{id:'pedidos',lbl:'Pedidos'},{id:'clientes',lbl:'Clientes'},{id:'recordatorios',lbl:'Recordatorios'},{id:'reportes',lbl:'Reportes'},{id:'usuarios',lbl:'Usuarios'}];
-const NAV=[{id:'dashboard',lbl:'📊 Dashboard'},{id:'ventas',lbl:'🛍️ Ventas'},{id:'gastos',lbl:'💸 Gastos'},{id:'inventario',lbl:'📦 Inventario'},{id:'historial',lbl:'📋 Historial'},{id:'pedidos',lbl:'🧾 Pedidos'},{id:'clientes',lbl:'👥 Clientes'},{id:'recordatorios',lbl:'🔔 Recordatorios'},{id:'reportes',lbl:'📄 Reportes'},{id:'usuarios',lbl:'🔐 Usuarios'}];
+const ALL_MODS=[{id:'dashboard',lbl:'Dashboard'},{id:'ventas',lbl:'Ventas'},{id:'gastos',lbl:'Gastos'},{id:'inventario',lbl:'Inventario'},{id:'historial',lbl:'Historial'},{id:'pedidos',lbl:'Pedidos'},{id:'clientes',lbl:'Clientes'},{id:'recordatorios',lbl:'Recordatorios'},{id:'reportes',lbl:'Reportes'},{id:'herramientas',lbl:'Herramientas'},{id:'usuarios',lbl:'Usuarios'}];
+const NAV=[{id:'dashboard',lbl:'📊 Dashboard'},{id:'ventas',lbl:'🛍️ Ventas'},{id:'gastos',lbl:'💸 Gastos'},{id:'inventario',lbl:'📦 Inventario'},{id:'historial',lbl:'📋 Historial'},{id:'pedidos',lbl:'🧾 Pedidos'},{id:'clientes',lbl:'👥 Clientes'},{id:'recordatorios',lbl:'🔔 Recordatorios'},{id:'reportes',lbl:'📄 Reportes'},{id:'herramientas',lbl:'🛠️ Herramientas'},{id:'usuarios',lbl:'🔐 Usuarios'}];
 const KNOWN_UIDS={'Mjz6kzVNvpPruDX6rYrXbfMkEdr1':{role:'owner',name:'Propietario'},'TOvDN7tPHNRScI8I1p4uIsn9AcB3':{role:'admin',name:'Administrador'},'3GFnDeCeSAQ2R7797qYTqTjdePN2':{role:'operator',name:'Operador Taller'},'ionMPMH6IBc0nYSGl2mimlHNVgn1':{role:'seller',name:'Vendedor'}};
 const FERIADOS=['01-01','01-06','02-24','02-25','03-19','04-14','04-17','04-18','04-19','05-01','06-24','06-29','07-05','07-24','10-12','11-01','12-08','12-24','12-25','12-31'];
 const STEPS=['Diseño digital','Aprobación cliente','Impresión positivo','Revelado bastidor','Estampado','Limpieza y empaque','Entrega / Envío'];
@@ -1329,6 +1376,125 @@ function editUsuario(id){
   $('euS').onclick=async()=>{const upd={name:$('eu_n').value.trim()};const nr=g('eu_r');if(nr)upd.role=nr;const perms=getPerms('eu');if(perms.length)upd.perms=perms;try{await db.collection('usuarios').doc(id).update(upd);closeModal();alert('✅ Actualizado');}catch(e){alert('Error: '+e.message);}};
   $('euC').onclick=closeModal;
 }
+
+// ── CRONÓMETRO DE INSOLACIÓN ──────────────────────────────
+let timerInterval=null, timerRemaining=90, timerTotal=90, timerRunning=false, audioCtx=null;
+
+function fmtTimer(s){
+  const m=Math.floor(s/60), sec=s%60;
+  return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+}
+function updateTimerDisplay(){
+  $('timerDisplay').textContent=fmtTimer(timerRemaining);
+  const pct=timerTotal>0?((timerTotal-timerRemaining)/timerTotal)*100:0;
+  $('timerProgressBar').style.width=pct+'%';
+  if(timerRemaining<=10&&timerRemaining>0){
+    $('timerDisplay').style.color='var(--red)';
+  } else {
+    $('timerDisplay').style.color='var(--dark)';
+  }
+}
+
+function playAlarmSound(){
+  if(!$('timerSoundToggle').checked) return;
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const playBeep=(freq,startTime,duration)=>{
+      const osc=audioCtx.createOscillator();
+      const gain=audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value=freq; osc.type='sine';
+      gain.gain.setValueAtTime(0.3, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime+duration);
+      osc.start(startTime); osc.stop(startTime+duration);
+    };
+    const now=audioCtx.currentTime;
+    // 5 beeps repetidos
+    for(let i=0;i<5;i++){
+      playBeep(880, now+i*0.4, 0.25);
+      playBeep(660, now+i*0.4+0.15, 0.2);
+    }
+  }catch(e){console.warn('Audio error:',e);}
+}
+
+function timerTick(){
+  if(timerRemaining<=0){
+    clearInterval(timerInterval);
+    timerInterval=null;
+    timerRunning=false;
+    $('timerStatus').textContent='✅ ¡Tiempo completado! Apaga la lámpara.';
+    $('timerStatus').style.color='var(--red)';
+    $('timerStatus').style.fontWeight='700';
+    $('btnTimerStart').style.display='inline-block';
+    $('btnTimerStart').textContent='▶️ Iniciar';
+    $('btnTimerPause').style.display='none';
+    playAlarmSound();
+    return;
+  }
+  timerRemaining--;
+  updateTimerDisplay();
+}
+
+function getConfiguredSeconds(){
+  const min=parseInt($('timerMin').value)||0;
+  const sec=parseInt($('timerSec').value)||0;
+  return Math.max(1, min*60+sec);
+}
+
+$('timerMin').addEventListener('input',()=>{ if(!timerRunning){ timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal; updateTimerDisplay(); $('timerPresets').value=''; }});
+$('timerSec').addEventListener('input',()=>{ if(!timerRunning){ timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal; updateTimerDisplay(); $('timerPresets').value=''; }});
+$('timerPresets').addEventListener('change',function(){
+  if(!this.value||timerRunning) return;
+  const total=parseInt(this.value);
+  sv('timerMin', Math.floor(total/60));
+  sv('timerSec', total%60);
+  timerTotal=total; timerRemaining=total;
+  updateTimerDisplay();
+});
+
+$('btnTimerStart').addEventListener('click',()=>{
+  if(timerRunning) return;
+  if(timerRemaining<=0||timerRemaining===timerTotal){
+    timerTotal=getConfiguredSeconds();
+    timerRemaining=timerTotal;
+  }
+  timerRunning=true;
+  $('timerStatus').textContent='🔥 Insolando... no apagues la lámpara';
+  $('timerStatus').style.color='var(--orange)';
+  $('timerStatus').style.fontWeight='700';
+  $('btnTimerStart').style.display='none';
+  $('btnTimerPause').style.display='inline-block';
+  $('timerConfigRow').style.opacity='0.5';
+  $('timerMin').disabled=true; $('timerSec').disabled=true; $('timerPresets').disabled=true;
+  updateTimerDisplay();
+  timerInterval=setInterval(timerTick,1000);
+});
+
+$('btnTimerPause').addEventListener('click',()=>{
+  clearInterval(timerInterval); timerInterval=null; timerRunning=false;
+  $('timerStatus').textContent='⏸️ Pausado';
+  $('timerStatus').style.color='var(--gray)';
+  $('btnTimerStart').style.display='inline-block';
+  $('btnTimerStart').textContent='▶️ Continuar';
+  $('btnTimerPause').style.display='none';
+});
+
+$('btnTimerReset').addEventListener('click',()=>{
+  clearInterval(timerInterval); timerInterval=null; timerRunning=false;
+  timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal;
+  updateTimerDisplay();
+  $('timerStatus').textContent='Listo para iniciar';
+  $('timerStatus').style.color='var(--gray)';
+  $('timerStatus').style.fontWeight='400';
+  $('btnTimerStart').style.display='inline-block';
+  $('btnTimerStart').textContent='▶️ Iniciar';
+  $('btnTimerPause').style.display='none';
+  $('timerConfigRow').style.opacity='1';
+  $('timerMin').disabled=false; $('timerSec').disabled=false; $('timerPresets').disabled=false;
+});
+
+// Inicializar display al cargar
+updateTimerDisplay();
 </script>
 </body>
 </html>
