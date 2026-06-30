@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Bunker Gráfico</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1e2d38"/>
 <style>
 :root{--dark:#1e2d38;--mid:#2d4455;--accent:#3d6475;--gray:#8a9ba8;--light:#f0f4f6;--green:#27ae60;--red:#e74c3c;--yellow:#f39c12;--blue:#2980b9;--orange:#e67e22;--border:#dde3e7;}
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif;}
@@ -42,6 +44,8 @@ header nav button.active,header nav button:hover{background:var(--accent);color:
 #mobileMenuPanel button.active,#mobileMenuPanel button:hover{background:var(--accent);color:#fff;}
 #mobileMenuPanel .mdivider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:12px 0;}
 main{max-width:1080px;margin:0 auto;padding:14px 10px;}
+#offlineBanner{display:none;background:#f39c12;color:#fff;text-align:center;padding:8px 14px;font-size:.8rem;font-weight:600;position:sticky;top:0;z-index:99;}
+#offlineBanner.show{display:block;}
 .bcv-bar{background:var(--mid);color:#fff;padding:7px 12px;font-size:.76rem;display:flex;align-items:center;gap:8px;border-radius:8px;margin-bottom:12px;flex-wrap:wrap;}
 .bcv-bar input{width:100px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 8px;border-radius:6px;font-size:.78rem;}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-bottom:14px;}
@@ -163,6 +167,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
 </div>
 
 <main id="mainContent" style="display:none">
+  <div id="offlineBanner">📡 Sin conexión a internet — trabajando con datos locales. Los cambios se sincronizarán automáticamente al recuperar la señal.</div>
   <div class="bcv-bar">
     💱 Tasa BCV (Bs/€):
     <input type="number" id="tasaBCV" placeholder="57.30" step="0.01"/>
@@ -446,6 +451,36 @@ const firebaseConfig={apiKey:"AIzaSyClR8OjrkTE9Exq5vyTMSC-rbzY_mwh1xA",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(), db=firebase.firestore();
 
+// ── PERSISTENCIA OFFLINE ──────────────────────────────────
+// Permite que la app funcione sin internet usando datos en caché,
+// y sincroniza automáticamente al recuperar la conexión.
+db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+  if (err.code === 'failed-precondition') {
+    console.warn('Persistencia offline: solo se puede activar en una pestaña a la vez.');
+  } else if (err.code === 'unimplemented') {
+    console.warn('Persistencia offline no soportada en este navegador.');
+  }
+});
+
+// ── DETECCIÓN DE ESTADO DE CONEXIÓN ───────────────────────
+let isOnline = navigator.onLine;
+window.addEventListener('online', () => { isOnline = true; updateConnectionBadge(); updateOfflineBanner(); });
+window.addEventListener('offline', () => { isOnline = false; updateConnectionBadge(); updateOfflineBanner(); });
+
+function updateConnectionBadge() {
+  const b = $('syncBadge');
+  if (!b) return;
+  if (!isOnline) {
+    b.textContent = '🔴 Sin internet (modo local)';
+    b.style.background = 'rgba(231,76,60,.35)';
+  }
+}
+function updateOfflineBanner() {
+  const banner = $('offlineBanner');
+  if (!banner) return;
+  banner.classList.toggle('show', !isOnline);
+}
+
 // ── CONSTANTES ────────────────────────────────────────────
 const ROLES={owner:'Propietario',admin:'Administrador',operator:'Operador',seller:'Vendedor'};
 const RPERMS={
@@ -545,16 +580,17 @@ function enterApp(){
   $('headerRole').textContent=CU.email;
   const mi=$('mobileUserInfo');if(mi)mi.textContent=CU.name+' · '+CU.email;
   setSyncBadge('⏳');buildNav();attachListeners();
+  updateOfflineBanner();
 }
 
 function attachListeners(){
-  const ok=()=>setSyncBadge('🟢 En línea','rgba(39,174,96,.3)');
-  const err=()=>setSyncBadge('🔴 Sin conexión','rgba(231,76,60,.3)');
-  unsubs.push(db.collection('ventas').orderBy('fecha','desc').onSnapshot(s=>{ventas=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('cotizaciones').orderBy('fecha','desc').onSnapshot(s=>{cotizaciones=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('gastos').orderBy('fecha','desc').onSnapshot(s=>{gastos=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('clientes').onSnapshot(s=>{clientes=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
-  unsubs.push(db.collection('inventario').onSnapshot(s=>{inventario=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  const ok=()=>{ if(isOnline) setSyncBadge('🟢 En línea','rgba(39,174,96,.3)'); else setSyncBadge('🟡 Datos en caché (sin internet)','rgba(243,156,18,.35)'); };
+  const err=()=>{ setSyncBadge('🔴 Sin conexión','rgba(231,76,60,.3)'); };
+  unsubs.push(db.collection('ventas').orderBy('fecha','desc').onSnapshot({includeMetadataChanges:true}, s=>{ventas=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('cotizaciones').orderBy('fecha','desc').onSnapshot({includeMetadataChanges:true}, s=>{cotizaciones=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('gastos').orderBy('fecha','desc').onSnapshot({includeMetadataChanges:true}, s=>{gastos=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('clientes').onSnapshot({includeMetadataChanges:true}, s=>{clientes=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
+  unsubs.push(db.collection('inventario').onSnapshot({includeMetadataChanges:true}, s=>{inventario=s.docs.map(d=>({...d.data(),id:d.id}));ok();refreshAll();},err));
   if(CU.perms.includes('usuarios'))unsubs.push(db.collection('usuarios').onSnapshot(s=>{usuariosDB=s.docs.map(d=>({...d.data(),id:d.id}));renderUsuarios();},err));
   unsubs.push(db.collection('config').doc('bcv').onSnapshot(d=>{if(d.exists){const data=d.data();if(document.activeElement!==$('tasaBCV'))sv('tasaBCV',data.tasa||'');if(data.fecha)$('bcvFecha').textContent='Act.: '+data.fecha;}},err));
 }
@@ -1382,6 +1418,15 @@ function editUsuario(id){
   `<button class="btn btn-p" id="euS">💾 Guardar</button><button class="btn" style="background:#eee;margin-left:6px" id="euC">Cancelar</button>`);
   $('euS').onclick=async()=>{const upd={name:$('eu_n').value.trim()};const nr=g('eu_r');if(nr)upd.role=nr;const perms=getPerms('eu');if(perms.length)upd.perms=perms;try{await db.collection('usuarios').doc(id).update(upd);closeModal();alert('✅ Actualizado');}catch(e){alert('Error: '+e.message);}};
   $('euC').onclick=closeModal;
+}
+
+// ── REGISTRO DEL SERVICE WORKER (modo offline) ────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registrado:', reg.scope))
+      .catch(err => console.warn('Error registrando Service Worker:', err));
+  });
 }
 
 // ── CRONÓMETRO DE INSOLACIÓN ──────────────────────────────
