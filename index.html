@@ -560,8 +560,11 @@ $('btnSaveBCV').addEventListener('click',async()=>{const v=g('tasaBCV'),f=new Da
 function buildNav(){
   const nav=$('mainNav');nav.innerHTML='';
   const mobileNav=$('mobileNav');if(mobileNav)mobileNav.innerHTML='';
+  // "herramientas" siempre visible para todos los usuarios autenticados,
+  // sin depender de los permisos guardados en Firebase
+  const perms=[...(CU.perms||[]), 'herramientas'];
   NAV.forEach(n=>{
-    if(!CU.perms.includes(n.id))return;
+    if(!perms.includes(n.id))return;
     const b=document.createElement('button');b.textContent=n.lbl;b.dataset.s=n.id;b.addEventListener('click',()=>showSection(n.id));nav.appendChild(b);
     if(mobileNav){const bm=document.createElement('button');bm.textContent=n.lbl;bm.dataset.s=n.id;bm.addEventListener('click',()=>{closeMobileMenu();showSection(n.id);});mobileNav.appendChild(bm);}
   });
