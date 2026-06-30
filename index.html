@@ -180,6 +180,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
   <!-- DASHBOARD -->
   <div id="sec-dashboard" class="section active">
     <div id="alertaPedidos"></div>
+    <div id="alertaRecordatoriosHoy"></div>
     <div class="cards" id="dashCards"></div>
     <div id="alertasStock"></div>
     <div class="fb"><h2>📋 Últimas transacciones</h2><div id="dashTable"></div></div>
@@ -1175,6 +1176,38 @@ function renderRecordatorios(){
   }));
 }
 
+// ── PANEL DIARIO DE RECORDATORIOS (Dashboard) ─────────────
+function getClientesParaRecordar(){
+  const DIAS_ALERTA=30;
+  const ahora=Date.now();
+  return clientes.map(cli=>{
+    const vCli=[...ventas].filter(v=>v.cliente?.toLowerCase()===cli.nombre?.toLowerCase()).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+    const ultima=vCli[0];
+    if(!ultima)return null;
+    const dias=Math.floor((ahora-new Date(ultima.fecha))/(1000*60*60*24));
+    return{cli,ultima,dias};
+  }).filter(x=>x&&x.dias>=DIAS_ALERTA).sort((a,b)=>b.dias-a.dias);
+}
+
+function renderRecordatoriosHoy(){
+  const el=$('alertaRecordatoriosHoy');
+  if(!el) return;
+  if(!CU.perms.includes('recordatorios')){ el.innerHTML=''; return; }
+  const lista=getClientesParaRecordar();
+  if(!lista.length){ el.innerHTML=''; return; }
+  const urgentes=lista.filter(x=>x.dias>=60).length;
+  el.innerHTML=`<div onclick="showSection('recordatorios')" style="cursor:pointer;background:#fff8e1;border:1px solid #f39c12;border-radius:11px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.07)" onmouseover="this.style.background='#fff3cd'" onmouseout="this.style.background='#fff8e1'">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="background:#f39c12;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;color:#fff">🔔</div>
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:#8a6000">${lista.length} cliente${lista.length>1?'s':''} para recordatorio hoy${urgentes?` <span style="color:var(--red)">(${urgentes} urgente${urgentes>1?'s':''})</span>`:''}</div>
+        <div style="font-size:.75rem;color:#a08030;margin-top:2px">${lista.slice(0,3).map(x=>x.cli.nombre).join(', ')}${lista.length>3?' y '+(lista.length-3)+' más...':''}</div>
+      </div>
+    </div>
+    <div style="font-size:.78rem;color:#a08030;white-space:nowrap">Ver recordatorios →</div>
+  </div>`;
+}
+
 // ── GASTOS ────────────────────────────────────────────────
 function addGastoItem(){
   gItemCnt++;const id=gItemCnt;
@@ -1259,6 +1292,9 @@ function renderDashboard(){
   }
 
   $('dashCards').innerHTML=`<div class="card green"><div class="lbl">Ventas mes</div><div class="val">€${tv.toFixed(2)}</div><div class="sub">${vM.length} pedido(s)</div></div><div class="card red"><div class="lbl">Gastos mes</div><div class="val">€${tg.toFixed(2)}</div><div class="sub">${gM.length} registro(s)</div></div><div class="card ${gan>=0?'green':'red'}"><div class="lbl">Ganancia</div><div class="val">€${gan.toFixed(2)}</div></div><div class="card yellow"><div class="lbl">Margen</div><div class="val">${mar.toFixed(1)}%</div></div><div class="card"><div class="lbl">Cotiz. pendientes</div><div class="val" style="color:var(--orange)">${cotizaciones.length}</div></div>`;
+
+  // ── Panel de recordatorios pendientes hoy ──
+  renderRecordatoriosHoy();
 
   const bajos=inventario.filter(i=>i.stockMin>0&&i.stock<=i.stockMin);
   const al=$('alertasStock');if(al)al.innerHTML=bajos.length?`<div class="alert-low" onclick="showSection('inventario')" style="cursor:pointer" title="Ver inventario">⚠️ <strong>Stock bajo:</strong> ${bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad||''})`).join(' · ')} <span style="float:right;font-weight:700">Ver inventario →</span></div>`:'';
