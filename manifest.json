@@ -1,0 +1,16 @@
+{
+  "name": "Bunker Gráfico - Sistema de Gestión",
+  "short_name": "Bunker Gráfico",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1e2d38",
+  "theme_color": "#1e2d38",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
