@@ -1389,17 +1389,24 @@ let timerInterval=null, timerRemaining=90, timerTotal=90, timerRunning=false, au
 let alarmInterval=null, alarmActive=false;
 
 function fmtTimer(s){
-  const m=Math.floor(s/60), sec=s%60;
-  return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  const neg = s < 0;
+  const abs = Math.abs(s);
+  const m=Math.floor(abs/60), sec=abs%60;
+  return (neg?'-':'')+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
 }
 function updateTimerDisplay(){
   $('timerDisplay').textContent=fmtTimer(timerRemaining);
-  const pct=timerTotal>0?((timerTotal-timerRemaining)/timerTotal)*100:0;
+  const pct=timerTotal>0?Math.min(100,((timerTotal-timerRemaining)/timerTotal)*100):0;
   $('timerProgressBar').style.width=pct+'%';
-  if(timerRemaining<=10&&timerRemaining>0){
+  if(timerRemaining<0){
     $('timerDisplay').style.color='var(--red)';
+    $('timerProgressBar').style.background='var(--red)';
+  } else if(timerRemaining<=10&&timerRemaining>0){
+    $('timerDisplay').style.color='var(--red)';
+    $('timerProgressBar').style.background='var(--green)';
   } else {
     $('timerDisplay').style.color='var(--dark)';
+    $('timerProgressBar').style.background='var(--green)';
   }
 }
 
@@ -1446,28 +1453,36 @@ function stopAlarmLoop(){
   if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}
   document.body.classList.remove('timer-alarming');
   $('btnStopAlarm').style.display='none';
-  $('timerStatus').textContent='✅ Alarma detenida. Tiempo completado.';
+  // Al detener la alarma, también detenemos el conteo negativo
+  clearInterval(timerInterval); timerInterval=null; timerRunning=false;
+  $('btnTimerStart').style.display='inline-block';
+  $('btnTimerStart').textContent='▶️ Iniciar';
+  $('btnTimerPause').style.display='none';
+  if(timerRemaining<0){
+    $('timerStatus').innerHTML=`✅ Alarma detenida. <strong style="color:var(--red)">Te excediste por ${fmtTimer(Math.abs(timerRemaining)).replace('-','')}</strong>`;
+  } else {
+    $('timerStatus').textContent='✅ Alarma detenida. Tiempo completado.';
+  }
   $('timerStatus').style.color='var(--green)';
 }
 
 $('btnStopAlarm').addEventListener('click', stopAlarmLoop);
 
 function timerTick(){
-  if(timerRemaining<=0){
-    clearInterval(timerInterval);
-    timerInterval=null;
-    timerRunning=false;
+  const wasPositive = timerRemaining > 0;
+  timerRemaining--;
+  updateTimerDisplay();
+  // Justo al cruzar de positivo a cero/negativo: disparar alarma una sola vez
+  if(wasPositive && timerRemaining<=0){
     $('timerStatus').textContent='🚨 ¡TIEMPO COMPLETADO! Apaga la lámpara y detén la alarma.';
     $('timerStatus').style.color='var(--red)';
     $('timerStatus').style.fontWeight='700';
-    $('btnTimerStart').style.display='inline-block';
-    $('btnTimerStart').textContent='▶️ Iniciar';
-    $('btnTimerPause').style.display='none';
     startAlarmLoop();
-    return;
   }
-  timerRemaining--;
-  updateTimerDisplay();
+  // Mientras esté en negativo y la alarma activa, mostrar tiempo de exceso
+  if(timerRemaining<0 && alarmActive){
+    $('timerStatus').textContent=`🚨 ¡TIEMPO EXCEDIDO POR ${fmtTimer(Math.abs(timerRemaining)).replace('-','')}! Detén la alarma.`;
+  }
 }
 
 function getConfiguredSeconds(){
@@ -1492,7 +1507,7 @@ $('btnTimerStart').addEventListener('click',()=>{
   // Desbloquear audio en móviles (requiere interacción del usuario)
   if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
-  stopAlarmLoop();
+  stopAlarmLoopSilent();
   if(timerRemaining<=0||timerRemaining===timerTotal){
     timerTotal=getConfiguredSeconds();
     timerRemaining=timerTotal;
@@ -1520,8 +1535,9 @@ $('btnTimerPause').addEventListener('click',()=>{
 
 $('btnTimerReset').addEventListener('click',()=>{
   clearInterval(timerInterval); timerInterval=null; timerRunning=false;
-  stopAlarmLoop();
+  stopAlarmLoopSilent();
   timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal;
+  $('timerProgressBar').style.background='var(--green)';
   updateTimerDisplay();
   $('timerStatus').textContent='Listo para iniciar';
   $('timerStatus').style.color='var(--gray)';
@@ -1532,6 +1548,14 @@ $('btnTimerReset').addEventListener('click',()=>{
   $('timerConfigRow').style.opacity='1';
   $('timerMin').disabled=false; $('timerSec').disabled=false; $('timerPresets').disabled=false;
 });
+
+function stopAlarmLoopSilent(){
+  // Igual que stopAlarmLoop pero sin mensajes, usado al reiniciar
+  alarmActive=false;
+  if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}
+  document.body.classList.remove('timer-alarming');
+  $('btnStopAlarm').style.display='none';
+}
 
 // Inicializar display al cargar
 updateTimerDisplay();
