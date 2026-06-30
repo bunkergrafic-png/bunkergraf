@@ -23,6 +23,9 @@ body{background:#f0f4f6;color:#1e2d38;min-height:100vh;}
 .lerr{color:#e74c3c;font-size:.75rem;margin-top:6px;display:none;}
 .spin{display:inline-block;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.85;transform:scale(1.04);}}
+@keyframes flashBg{0%,100%{background-color:#fff;}50%{background-color:#fde8e8;}}
+.timer-alarming{animation:flashBg 0.6s infinite;}
 header{background:var(--dark);color:#fff;padding:9px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);}
 header nav{margin-left:auto;display:flex;gap:3px;flex-wrap:wrap;}
 header nav button{background:transparent;border:none;color:#aac;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.7rem;}
@@ -401,6 +404,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
         <button class="btn btn-s" id="btnTimerStart" style="padding:12px 28px;font-size:1rem">▶️ Iniciar</button>
         <button class="btn btn-w" id="btnTimerPause" style="padding:12px 28px;font-size:1rem;display:none">⏸️ Pausar</button>
         <button class="btn btn-d" id="btnTimerReset" style="padding:12px 28px;font-size:1rem">🔄 Reiniciar</button>
+        <button class="btn" id="btnStopAlarm" style="padding:12px 28px;font-size:1rem;display:none;background:#e74c3c;color:#fff;animation:pulse 1s infinite">🔇 DETENER ALARMA</button>
       </div>
 
       <div style="text-align:center;margin-top:16px">
@@ -1382,6 +1386,7 @@ function editUsuario(id){
 
 // ── CRONÓMETRO DE INSOLACIÓN ──────────────────────────────
 let timerInterval=null, timerRemaining=90, timerTotal=90, timerRunning=false, audioCtx=null;
+let alarmInterval=null, alarmActive=false;
 
 function fmtTimer(s){
   const m=Math.floor(s/60), sec=s%60;
@@ -1398,40 +1403,67 @@ function updateTimerDisplay(){
   }
 }
 
-function playAlarmSound(){
-  if(!$('timerSoundToggle').checked) return;
+function playSingleBeepPair(){
   try{
     if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
     const playBeep=(freq,startTime,duration)=>{
       const osc=audioCtx.createOscillator();
       const gain=audioCtx.createGain();
       osc.connect(gain); gain.connect(audioCtx.destination);
       osc.frequency.value=freq; osc.type='sine';
-      gain.gain.setValueAtTime(0.3, startTime);
+      gain.gain.setValueAtTime(0.35, startTime);
       gain.gain.exponentialRampToValueAtTime(0.01, startTime+duration);
       osc.start(startTime); osc.stop(startTime+duration);
     };
     const now=audioCtx.currentTime;
-    // 5 beeps repetidos
-    for(let i=0;i<5;i++){
-      playBeep(880, now+i*0.4, 0.25);
-      playBeep(660, now+i*0.4+0.15, 0.2);
-    }
+    playBeep(880, now, 0.28);
+    playBeep(660, now+0.18, 0.25);
   }catch(e){console.warn('Audio error:',e);}
 }
+
+function startAlarmLoop(){
+  if(!$('timerSoundToggle').checked) return;
+  alarmActive=true;
+  // Primer sonido inmediato
+  playSingleBeepPair();
+  // Repetir cada 700ms hasta que se detenga manualmente
+  alarmInterval=setInterval(()=>{
+    if(!alarmActive){clearInterval(alarmInterval);alarmInterval=null;return;}
+    playSingleBeepPair();
+  },700);
+  // Vibración en móviles si está disponible
+  if(navigator.vibrate){
+    try{ navigator.vibrate([300,150,300,150,300]); }catch(e){}
+  }
+  // Flash visual en la pantalla
+  document.body.classList.add('timer-alarming');
+  $('btnStopAlarm').style.display='inline-block';
+}
+
+function stopAlarmLoop(){
+  alarmActive=false;
+  if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}
+  document.body.classList.remove('timer-alarming');
+  $('btnStopAlarm').style.display='none';
+  $('timerStatus').textContent='✅ Alarma detenida. Tiempo completado.';
+  $('timerStatus').style.color='var(--green)';
+}
+
+$('btnStopAlarm').addEventListener('click', stopAlarmLoop);
 
 function timerTick(){
   if(timerRemaining<=0){
     clearInterval(timerInterval);
     timerInterval=null;
     timerRunning=false;
-    $('timerStatus').textContent='✅ ¡Tiempo completado! Apaga la lámpara.';
+    $('timerStatus').textContent='🚨 ¡TIEMPO COMPLETADO! Apaga la lámpara y detén la alarma.';
     $('timerStatus').style.color='var(--red)';
     $('timerStatus').style.fontWeight='700';
     $('btnTimerStart').style.display='inline-block';
     $('btnTimerStart').textContent='▶️ Iniciar';
     $('btnTimerPause').style.display='none';
-    playAlarmSound();
+    startAlarmLoop();
     return;
   }
   timerRemaining--;
@@ -1457,6 +1489,10 @@ $('timerPresets').addEventListener('change',function(){
 
 $('btnTimerStart').addEventListener('click',()=>{
   if(timerRunning) return;
+  // Desbloquear audio en móviles (requiere interacción del usuario)
+  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  stopAlarmLoop();
   if(timerRemaining<=0||timerRemaining===timerTotal){
     timerTotal=getConfiguredSeconds();
     timerRemaining=timerTotal;
@@ -1484,6 +1520,7 @@ $('btnTimerPause').addEventListener('click',()=>{
 
 $('btnTimerReset').addEventListener('click',()=>{
   clearInterval(timerInterval); timerInterval=null; timerRunning=false;
+  stopAlarmLoop();
   timerTotal=getConfiguredSeconds(); timerRemaining=timerTotal;
   updateTimerDisplay();
   $('timerStatus').textContent='Listo para iniciar';
