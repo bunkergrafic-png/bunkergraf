@@ -119,7 +119,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
 @media(max-width:700px){
   header nav{display:none;}
   #hambBtn{display:block;}
-  .ubadge#syncBadge,.ubadge#userBadge{display:none;}
+  .ubadge#syncBadge,.ubadge#userBadge,.ubadge#bcvBadge{display:none;}
   .brand p{display:none;}
   .row.r3,.row.r4{grid-template-columns:1fr 1fr;}
 }
@@ -149,6 +149,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
     <div class="brand"><h1>BUNKER GRÁFICO</h1><p id="headerRole"></p></div>
   </div>
   <nav id="mainNav"></nav>
+  <span class="ubadge" id="bcvBadge" title="Ver tasas de cambio" style="cursor:pointer">💱 Tasas</span>
   <span class="ubadge" id="syncBadge">⏳</span>
   <span class="ubadge" id="userBadge">–</span>
   <span class="ubadge" id="logoutBtn">Salir</span>
@@ -167,19 +168,6 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
 
 <main id="mainContent" style="display:none">
   <div id="offlineBanner">📡 Sin conexión a internet — trabajando con datos locales. Los cambios se sincronizarán automáticamente al recuperar la señal.</div>
-
-  <div class="fb" style="padding:12px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <strong style="font-size:.82rem">💱 Tasas de cambio (Bs por unidad)</strong>
-      <button class="btn btn-sm btn-p" id="btnAutoTasaBCV" title="Obtener tasa BCV automáticamente">🔄 Auto BCV</button>
-    </div>
-    <div id="tasasContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"></div>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-p btn-sm" id="btnAddTasa">➕ Agregar moneda/tasa</button>
-      <button class="btn btn-s btn-sm" id="btnSaveTasas">💾 Guardar todas las tasas</button>
-      <span style="font-size:.7rem;color:var(--gray)" id="tasasFecha"></span>
-    </div>
-  </div>
 
   <div id="sec-dashboard" class="section active">
     <div id="alertaPedidos"></div>
@@ -374,6 +362,11 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
   </div>
 
   <div id="sec-herramientas" class="section">
+    <div class="fb" style="padding:10px;display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-sm btn-p" id="htabCrono">⏱️ Cronómetro</button>
+      <button class="btn btn-sm" style="background:#eee;color:#333" id="htabTasas">💱 Tasas de Cambio</button>
+    </div>
+    <div id="htab-crono">
     <div class="fb">
       <h2>⏱️ Cronómetro de Insolación</h2>
       <div class="info-note">Configura el tiempo de exposición a la lámpara y presiona Iniciar. Sonará una alarma cuando termine.</div>
@@ -411,6 +404,21 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer">
           <input type="checkbox" id="timerSoundToggle" checked style="width:auto"/> 🔊 Sonido de alarma activado
         </label>
+      </div>
+    </div>
+    </div>
+    <div id="htab-tasas" style="display:none">
+      <div class="fb" style="padding:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <strong style="font-size:.82rem">💱 Tasas de cambio (Bs por unidad)</strong>
+          <button class="btn btn-sm btn-p" id="btnAutoTasaBCV" title="Obtener tasa BCV automáticamente">🔄 Auto BCV</button>
+        </div>
+        <div id="tasasContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-p btn-sm" id="btnAddTasa">➕ Agregar moneda/tasa</button>
+          <button class="btn btn-s btn-sm" id="btnSaveTasas">💾 Guardar todas las tasas</button>
+          <span style="font-size:.7rem;color:var(--gray)" id="tasasFecha"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -597,6 +605,7 @@ function showSection(id){
   if(id==='ventas'){initBuscadorCliente();}
   if(id==='gastos'&&!gItemCnt)addGastoItem();
   if(id==='recordatorios')renderRecordatorios();
+  if(id==='herramientas')showHerrTab('crono');
   renderSection(id);
 }
 function renderSection(id){
@@ -630,7 +639,27 @@ function renderTasasUI(){
   });
   cont.querySelectorAll('[data-deltasa]').forEach(b=>b.addEventListener('click',()=>{delete tasas[b.dataset.deltasa];renderTasasUI();}));
   cont.querySelectorAll('[data-setprincipal]').forEach(b=>b.addEventListener('click',()=>{monedaPrincipal=b.dataset.setprincipal;renderTasasUI();recalcItems();recalcGastoItems();}));
+  updateBcvBadge();
 }
+function updateBcvBadge(){
+  const b=$('bcvBadge'); if(!b) return;
+  const t=tasas[monedaPrincipal];
+  b.textContent = (t && t.valor) ? `💱 ${monedaPrincipal} = Bs ${t.valor.toLocaleString('es-VE',{maximumFractionDigits:2})}` : '💱 Tasas';
+}
+function showHerrTab(tab){
+  const isCrono = tab==='crono';
+  $('htab-crono').style.display = isCrono ? 'block' : 'none';
+  $('htab-tasas').style.display = isCrono ? 'none' : 'block';
+  $('htabCrono').classList.toggle('btn-p', isCrono);
+  $('htabTasas').classList.toggle('btn-p', !isCrono);
+  $('htabCrono').style.background = isCrono ? '' : '#eee';
+  $('htabCrono').style.color = isCrono ? '' : '#333';
+  $('htabTasas').style.background = !isCrono ? '' : '#eee';
+  $('htabTasas').style.color = !isCrono ? '' : '#333';
+}
+$('htabCrono').addEventListener('click',()=>showHerrTab('crono'));
+$('htabTasas').addEventListener('click',()=>showHerrTab('tasas'));
+$('bcvBadge').addEventListener('click',()=>{showSection('herramientas');showHerrTab('tasas');});
 $('btnAddTasa').addEventListener('click',()=>{
   openModal('➕ Agregar moneda / tasa',
     `<div class="row"><div><label>Código (USD, USDT...)</label><input id="nt_code" placeholder="USD" maxlength="6" style="text-transform:uppercase"/></div><div><label>Nombre</label><input id="nt_nombre" placeholder="Dólar"/></div></div>
