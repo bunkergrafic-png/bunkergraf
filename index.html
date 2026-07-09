@@ -221,10 +221,20 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
 
       <div style="margin:10px 0 6px;font-size:.8rem;font-weight:700">📦 Ítems del pedido <button class="btn btn-s btn-sm" id="btnAddItem">+ Agregar ítem</button></div>
       <div id="itemsContainer"></div>
+      <div class="row r3" style="margin-top:8px">
+        <div><label>Descuento (€)</label><input type="number" id="vDescuento" step="0.01" placeholder="0.00"/></div>
+        <div><label>Estado de pago</label><select id="vPagoEstado">
+          <option value="pagado">✅ Pagado completo</option>
+          <option value="pendiente">🔴 Pendiente (debe todo)</option>
+          <option value="parcial">🟡 Abono parcial</option>
+        </select></div>
+        <div id="vAbonoBox" style="display:none"><label>Abona ahora (€)</label><input type="number" id="vAbonoMonto" step="0.01" placeholder="0.00"/></div>
+      </div>
       <div class="pbox" id="totalBox" style="display:none">
-        <div style="font-size:1.2rem;font-weight:700" id="totalEuro">€0.00</div>
+        <div id="totalEuro" style="font-size:1.2rem;font-weight:700">€0.00</div>
         <div style="color:var(--gray)" id="totalBs"></div>
         <div style="font-size:.68rem;color:#aaa" id="totalDetalle"></div>
+        <div id="saldoLinea" style="font-size:.76rem;margin-top:4px;font-weight:600"></div>
       </div>
       <div class="row r1"><label>Notas</label><textarea id="vNotas"></textarea></div>
       <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
@@ -362,9 +372,10 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
   </div>
 
   <div id="sec-herramientas" class="section">
-    <div class="fb" style="padding:10px;display:flex;gap:8px;margin-bottom:12px">
+    <div class="fb" style="padding:10px;display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <button class="btn btn-sm btn-p" id="htabCrono">⏱️ Cronómetro</button>
       <button class="btn btn-sm" style="background:#eee;color:#333" id="htabTasas">💱 Tasas de Cambio</button>
+      <button class="btn btn-sm" style="background:#eee;color:#333" id="htabFormulas">🧪 Fórmulas de Tinta</button>
     </div>
     <div id="htab-crono">
     <div class="fb">
@@ -418,6 +429,20 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
           <button class="btn btn-p btn-sm" id="btnAddTasa">➕ Agregar moneda/tasa</button>
           <button class="btn btn-s btn-sm" id="btnSaveTasas">💾 Guardar todas las tasas</button>
           <span style="font-size:.7rem;color:var(--gray)" id="tasasFecha"></span>
+        </div>
+      </div>
+    </div>
+    <div id="htab-formulas" style="display:none">
+      <div class="fb">
+        <h2>🧪 Fórmulas de Tinta</h2>
+        <div class="info-note">Indica cuántos gramos de base vas a usar y el sistema calcula automáticamente el insumo necesario. El solvente adicional para diluir queda a tu criterio.</div>
+        <div class="row">
+          <div><label>Fórmula</label><select id="formulaSelect"><option value="dorada">Tinta Dorada (Polvo Oro Tinpes)</option></select></div>
+          <div><label>Gramos de Base Solvente Transparente</label><input type="number" id="formulaBaseGr" step="0.1" placeholder="Ej: 134"/></div>
+        </div>
+        <div class="pbox" id="formulaResultBox" style="display:none">
+          <div style="font-size:1.2rem;font-weight:700" id="formulaResultTxt"></div>
+          <div style="font-size:.7rem;color:var(--gray);margin-top:2px" id="formulaResultSub"></div>
         </div>
       </div>
     </div>
@@ -485,6 +510,14 @@ function calcPrecioBolsa(tamKey, cant){
   const nivel=t.precios.find(p=>cant>=p.min&&cant<=p.max); if(!nivel) return null;
   const precioUnitario=nivel.precio/nivel.por;
   return {total:Math.round(precioUnitario*cant*100)/100, unitario:precioUnitario, nivel, tamNombre:t.nombre};
+}
+const FORMULAS_TINTA={
+  dorada:{nombre:'Tinta Dorada',marca:'Tinpes',insumo:'Polvo Oro',base:'Base Solvente Transparente',porcentaje:15}
+};
+function calcFormulaTinta(key,gramosBase){
+  const f=FORMULAS_TINTA[key]; if(!f||gramosBase<=0) return null;
+  const gramosInsumo=Math.round(gramosBase*(f.porcentaje/100)*100)/100;
+  return {...f,gramosBase,gramosInsumo};
 }
 
 // ── ESTADO ────────────────────────────────────────────────
@@ -647,18 +680,33 @@ function updateBcvBadge(){
   b.textContent = (t && t.valor) ? `💱 ${monedaPrincipal} = Bs ${t.valor.toLocaleString('es-VE',{maximumFractionDigits:2})}` : '💱 Tasas';
 }
 function showHerrTab(tab){
-  const isCrono = tab==='crono';
-  $('htab-crono').style.display = isCrono ? 'block' : 'none';
-  $('htab-tasas').style.display = isCrono ? 'none' : 'block';
-  $('htabCrono').classList.toggle('btn-p', isCrono);
-  $('htabTasas').classList.toggle('btn-p', !isCrono);
-  $('htabCrono').style.background = isCrono ? '' : '#eee';
-  $('htabCrono').style.color = isCrono ? '' : '#333';
-  $('htabTasas').style.background = !isCrono ? '' : '#eee';
-  $('htabTasas').style.color = !isCrono ? '' : '#333';
+  const tabs=['crono','tasas','formulas'];
+  const btnMap={crono:'htabCrono',tasas:'htabTasas',formulas:'htabFormulas'};
+  tabs.forEach(t=>{
+    const panel=$('htab-'+t); if(panel) panel.style.display = t===tab?'block':'none';
+    const btn=$(btnMap[t]);
+    if(btn){
+      const active=t===tab;
+      btn.classList.toggle('btn-p',active);
+      btn.style.background=active?'':'#eee';
+      btn.style.color=active?'':'#333';
+    }
+  });
 }
 $('htabCrono').addEventListener('click',()=>showHerrTab('crono'));
 $('htabTasas').addEventListener('click',()=>showHerrTab('tasas'));
+$('htabFormulas').addEventListener('click',()=>showHerrTab('formulas'));
+$('formulaSelect').addEventListener('change',calcFormula);
+$('formulaBaseGr').addEventListener('input',calcFormula);
+function calcFormula(){
+  const key=g('formulaSelect'); const base=parseFloat(g('formulaBaseGr'))||0;
+  const box=$('formulaResultBox');
+  const r=calcFormulaTinta(key,base);
+  if(!r){box.style.display='none';return;}
+  box.style.display='block';
+  $('formulaResultTxt').textContent=`⚖️ ${r.gramosInsumo} g de ${r.insumo} (${r.marca})`;
+  $('formulaResultSub').textContent=`Para ${base} g de ${r.base} · Proporción fija: ${r.porcentaje}% · Agrega solvente adicional según la dilución que necesites`;
+}
 $('bcvBadge').addEventListener('click',()=>{showSection('herramientas');showHerrTab('tasas');});
 $('btnAddTasa').addEventListener('click',()=>{
   openModal('➕ Agregar moneda / tasa',
@@ -823,6 +871,12 @@ function addItem(){
   $('itemsContainer').appendChild(div);
 }
 $('btnAddItem').addEventListener('click',addItem);
+$('vDescuento').addEventListener('input',recalcItems);
+$('vPagoEstado').addEventListener('change',()=>{
+  $('vAbonoBox').style.display = g('vPagoEstado')==='parcial' ? 'block' : 'none';
+  recalcItems();
+});
+$('vAbonoMonto').addEventListener('input',recalcItems);
 
 function getTamKey(prodVal){
   if(prodVal==='_bolsa_pequena')return 'pequena';
@@ -880,7 +934,24 @@ function recalcItems(){
     else{const precio=parseFloat(el.querySelector('[data-precio]')?.value)||0;subtotal=cant*precio;}
     if(subtotal>0){total+=subtotal;count++;}
   });
-  if(count>0){$('totalBox').style.display='block';$('totalEuro').textContent='€'+total.toFixed(2);const b=getBCV();$('totalBs').textContent=b?'Bs '+(total*b).toLocaleString('es-VE',{minimumFractionDigits:0}):'';$('totalDetalle').textContent=count+' ítem(s)';}
+  const descuento=Math.max(0,parseFloat(g('vDescuento'))||0);
+  const totalFinal=Math.max(0,total-descuento);
+  const b=getBCV();
+  if(count>0){
+    $('totalBox').style.display='block';
+    $('totalEuro').innerHTML = descuento>0
+      ? `<span style="text-decoration:line-through;color:var(--gray);font-size:.85rem">€${total.toFixed(2)}</span> €${totalFinal.toFixed(2)} <span style="font-size:.68rem;color:var(--red);font-weight:400">(-€${descuento.toFixed(2)})</span>`
+      : '€'+totalFinal.toFixed(2);
+    $('totalBs').textContent=b?'Bs '+(totalFinal*b).toLocaleString('es-VE',{minimumFractionDigits:0}):'';
+    $('totalDetalle').textContent=count+' ítem(s)';
+    const pagoEstado=g('vPagoEstado')||'pagado';
+    let abonado=pagoEstado==='pagado'?totalFinal:pagoEstado==='parcial'?(parseFloat(g('vAbonoMonto'))||0):0;
+    const saldo=Math.max(0,totalFinal-abonado);
+    $('saldoLinea').innerHTML = saldo>0
+      ? `🔴 Saldo pendiente: €${saldo.toFixed(2)}${b?' · Bs '+(saldo*b).toLocaleString('es-VE',{maximumFractionDigits:0}):''}`
+      : `✅ Sin saldo pendiente`;
+    $('saldoLinea').style.color = saldo>0?'var(--red)':'var(--green)';
+  }
   else $('totalBox').style.display='none';
 }
 function getItemColor(id){const sel=document.querySelector(`[data-colsel="${id}"]`)?.value;return sel==='_otro'?(document.querySelector(`[data-colcust="${id}"]`)?.value||''):sel||'';}
@@ -970,8 +1041,8 @@ function cargarDatosCliente(cli, ultimaVenta){
 }
 
 function limpiarVentaForm(){
-  ['vCliente','vEmprendimiento','vInstagram','vTelefono','vRif','vCiudad','vOficina','vNotas','vRecibeNombre','vRecibeTelefono','vRecibeCI'].forEach(id=>sv(id,''));
-  sv('vEnvio','');sv('vFechaEntrega','');$('itemsContainer').innerHTML='';itemCnt=0;$('totalBox').style.display='none';sv('ventaEditId','');$('ventaFormTitle').textContent='🛍️ Nueva Cotización / Venta';lastVenta=null;
+  ['vCliente','vEmprendimiento','vInstagram','vTelefono','vRif','vCiudad','vOficina','vNotas','vRecibeNombre','vRecibeTelefono','vRecibeCI','vDescuento','vAbonoMonto'].forEach(id=>sv(id,''));
+  sv('vEnvio','');sv('vFechaEntrega','');sv('vPagoEstado','pagado');$('vAbonoBox').style.display='none';$('itemsContainer').innerHTML='';itemCnt=0;$('totalBox').style.display='none';sv('ventaEditId','');$('ventaFormTitle').textContent='🛍️ Nueva Cotización / Venta';lastVenta=null;
   $('cliSuggest').classList.remove('visible');$('vClienteBuscar').value='';$('clienteDropdown').innerHTML='';clienteSugerido=null;
 }
 $('btnLimpiar').addEventListener('click',limpiarVentaForm);
@@ -980,10 +1051,21 @@ $('btnLimpiar').addEventListener('click',limpiarVentaForm);
 function buildVentaObj(tipo){
   const cliente=g('vCliente').trim();if(!cliente){alert('El cliente es requerido');return null;}
   const items=getItems();if(!items.length){alert('Agrega al menos un ítem');return null;}
-  const totalEuro=items.reduce((a,i)=>a+i.total,0),bcv=getBCV();
+  const subtotal=items.reduce((a,i)=>a+i.total,0);
+  const descuento=Math.max(0,parseFloat(g('vDescuento'))||0);
+  const totalEuro=Math.max(0,subtotal-descuento);
+  const bcv=getBCV();
   const fd=g('vFechaEntrega'),eISO=fd||entregaISO(6);
+  const pagoEstado=tipo==='cotizacion' ? 'pendiente' : (g('vPagoEstado')||'pagado');
+  let abonado=0;
+  if(tipo==='venta'){
+    if(pagoEstado==='pagado') abonado=totalEuro;
+    else if(pagoEstado==='parcial') abonado=Math.min(totalEuro,Math.max(0,parseFloat(g('vAbonoMonto'))||0));
+  }
+  const saldo=Math.max(0,totalEuro-abonado);
+  const abonos = abonado>0 ? [{fecha:new Date().toISOString(),montoEuro:abonado,montoBs:bcv?abonado*bcv:null,tasa:bcv,nota:'Abono inicial'}] : [];
   autoRegCliente();
-  return{tipo,fecha:new Date().toISOString(),cliente,emprendimiento:g('vEmprendimiento').trim(),ig:g('vInstagram').trim(),telefono:g('vTelefono').trim(),rif:g('vRif').trim(),ciudad:g('vCiudad').trim(),envio:g('vEnvio'),oficina:g('vOficina').trim(),recibeNombre:g('vRecibeNombre').trim(),recibeTelefono:g('vRecibeTelefono').trim(),recibeCI:g('vRecibeCI').trim(),notas:g('vNotas').trim(),items,totalEuro,totalBs:bcv?totalEuro*bcv:null,bcv,entregaISO:eISO,entregaStr:fmtL(eISO),status:STEPS.map(s=>({name:s,done:false})),creadoPor:CU.email};
+  return{tipo,fecha:new Date().toISOString(),cliente,emprendimiento:g('vEmprendimiento').trim(),ig:g('vInstagram').trim(),telefono:g('vTelefono').trim(),rif:g('vRif').trim(),ciudad:g('vCiudad').trim(),envio:g('vEnvio'),oficina:g('vOficina').trim(),recibeNombre:g('vRecibeNombre').trim(),recibeTelefono:g('vRecibeTelefono').trim(),recibeCI:g('vRecibeCI').trim(),notas:g('vNotas').trim(),items,subtotal,descuento,totalEuro,totalBs:bcv?totalEuro*bcv:null,bcv,pagoEstado,abonado,saldo,abonos,entregaISO:eISO,entregaStr:fmtL(eISO),status:STEPS.map(s=>({name:s,done:false})),creadoPor:CU.email};
 }
 $('btnCotiz').addEventListener('click',async()=>{
   if($('btnCotiz').disabled) return;
@@ -1059,7 +1141,10 @@ function editarCotiz(id){
 function buildRecibo(v){
   const items=v.items||[];let det='';
   items.forEach((it,i)=>{det+=`\n• ${it.desc||'Ítem '+(i+1)}${it.color&&it.color!=='Blanca'?' – Bolsa '+it.color:''}${it.tinta?' – Tinta '+it.tinta+' 🎨':''}: x${it.cant} — *€${it.total?.toFixed(2)||'–'}*${it.nota?'\n  _'+it.nota+'_':''}`;});
-  return `🖨️ *BUNKER GRÁFICO*\n📲 @bunkergraf | 📞 04244438937\n─────────────────────\n✅ *${v.tipo==='cotizacion'?'COTIZACIÓN':'PEDIDO CONFIRMADO'}*\n─────────────────────\n👤 ${v.cliente}${v.emprendimiento?'\n🏪 '+v.emprendimiento:''}${v.ig?'\n📸 '+v.ig:''}\n📅 ${fmtF(v.fecha)}\n\n📦 *Detalle:*${det}\n\n💶 *TOTAL: €${v.totalEuro?.toFixed(2)||'–'}*${v.totalBs?'\n💵 Bs '+v.totalBs?.toLocaleString('es-VE',{maximumFractionDigits:0}):''}${v.bcv?'\n💱 Tasa: '+v.bcv+' Bs/€':''}\n\n📅 *Entrega: ${v.entregaStr||'–'}*${v.envio?'\n🚚 '+v.envio+(v.oficina?' – '+v.oficina:''):''}\n─────────────────────\n¡Gracias por elegirnos! 🙏`;
+  const descLinea = v.descuento>0 ? `\n💚 Descuento aplicado: -€${v.descuento.toFixed(2)}` : '';
+  const saldo=v.saldo??0;
+  const saldoLinea = saldo>0.005 ? `\n\n🔴 *SALDO PENDIENTE: €${saldo.toFixed(2)}*${v.bcv?' (Bs '+(saldo*v.bcv).toLocaleString('es-VE',{maximumFractionDigits:0})+')':''}` : (v.tipo==='venta' ? '\n\n✅ *Pago completo*' : '');
+  return `🖨️ *BUNKER GRÁFICO*\n📲 @bunkergraf | 📞 04244438937\n─────────────────────\n✅ *${v.tipo==='cotizacion'?'COTIZACIÓN':'PEDIDO CONFIRMADO'}*\n─────────────────────\n👤 ${v.cliente}${v.emprendimiento?'\n🏪 '+v.emprendimiento:''}${v.ig?'\n📸 '+v.ig:''}\n📅 ${fmtF(v.fecha)}\n\n📦 *Detalle:*${det}${descLinea}\n\n💶 *TOTAL: €${v.totalEuro?.toFixed(2)||'–'}*${v.totalBs?'\n💵 Bs '+v.totalBs?.toLocaleString('es-VE',{maximumFractionDigits:0}):''}${v.bcv?'\n💱 Tasa: '+v.bcv+' Bs/€':''}${saldoLinea}\n\n📅 *Entrega: ${v.entregaStr||'–'}*${v.envio?'\n🚚 '+v.envio+(v.oficina?' – '+v.oficina:''):''}\n─────────────────────\n¡Gracias por elegirnos! 🙏`;
 }
 function showWAModal(v){
   if(!v) return;
@@ -1145,6 +1230,8 @@ function renderDashboard(){
   const vM=ventas.filter(v=>{const d=new Date(v.fecha);return d.getMonth()===mes&&d.getFullYear()===anio;});
   const gM=gastos.filter(v=>{const d=new Date(v.fecha);return d.getMonth()===mes&&d.getFullYear()===anio;});
   const tv=vM.reduce((a,v)=>a+(v.totalEuro||0),0),tg=gM.reduce((a,g)=>a+(g.euro||0),0),gan=tv-tg,mar=tv?(gan/tv*100):0;
+  const totalPorCobrar=ventas.reduce((a,v)=>a+(v.saldo||0),0);
+  const clientesPorCobrar=ventas.filter(v=>(v.saldo||0)>0.005).length;
 
   const pendientes=ventas.filter(v=>{const tot=v.status?.length||0,done=v.status?.filter(s=>s.done).length||0;return done<tot;});
   const ap=$('alertaPedidos');
@@ -1165,7 +1252,7 @@ function renderDashboard(){
 
   renderRecordatoriosHoy();
 
-  $('dashCards').innerHTML=`<div class="card green"><div class="lbl">Ventas mes</div><div class="val">€${tv.toFixed(2)}</div><div class="sub">${vM.length} pedido(s)</div></div><div class="card red"><div class="lbl">Gastos mes</div><div class="val">€${tg.toFixed(2)}</div><div class="sub">${gM.length} registro(s)</div></div><div class="card ${gan>=0?'green':'red'}"><div class="lbl">Ganancia</div><div class="val">€${gan.toFixed(2)}</div></div><div class="card yellow"><div class="lbl">Margen</div><div class="val">${mar.toFixed(1)}%</div></div><div class="card"><div class="lbl">Cotiz. pendientes</div><div class="val" style="color:var(--orange)">${cotizaciones.length}</div></div>`;
+  $('dashCards').innerHTML=`<div class="card green"><div class="lbl">Ventas mes</div><div class="val">€${tv.toFixed(2)}</div><div class="sub">${vM.length} pedido(s)</div></div><div class="card red"><div class="lbl">Gastos mes</div><div class="val">€${tg.toFixed(2)}</div><div class="sub">${gM.length} registro(s)</div></div><div class="card ${gan>=0?'green':'red'}"><div class="lbl">Ganancia</div><div class="val">€${gan.toFixed(2)}</div></div><div class="card yellow"><div class="lbl">Margen</div><div class="val">${mar.toFixed(1)}%</div></div><div class="card"><div class="lbl">Cotiz. pendientes</div><div class="val" style="color:var(--orange)">${cotizaciones.length}</div></div><div class="card red" style="cursor:pointer" onclick="showSection('pedidos')"><div class="lbl">💰 Por cobrar</div><div class="val">€${totalPorCobrar.toFixed(2)}</div><div class="sub">${clientesPorCobrar} venta(s)</div></div>`;
 
   const bajos=inventario.filter(i=>i.stockMin>0&&i.stock<=i.stockMin);
   const al=$('alertasStock');if(al)al.innerHTML=bajos.length?`<div class="alert-low" onclick="showSection('inventario')" style="cursor:pointer">⚠️ <strong>Stock bajo:</strong> ${bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad||''})`).join(' · ')}</div>`:'';
@@ -1187,7 +1274,12 @@ function renderHistorial(){
   let h=`<div class="tw"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>€</th><th>Acciones</th></tr></thead><tbody>`;
   all.forEach(r=>{
     let badge='',desc='',btns='';
-    if(r.tipo==='venta'){badge='<span class="badge bg-g">Venta</span>';desc=r.cliente+(r.emprendimiento?' – '+r.emprendimiento:'');btns=`<button class="btn btn-wa btn-sm" data-hw="${r.id}">📲</button><button class="btn btn-w btn-sm" data-hew="${r.id}">✏️</button><button class="btn btn-d" data-hdv="${r.id}">🗑</button>`;}
+    if(r.tipo==='venta'){
+      const saldoR=r.saldo??0;
+      badge = saldoR>0.005 ? '<span class="badge bg-r">Venta · Debe</span>' : '<span class="badge bg-g">Venta</span>';
+      desc=r.cliente+(r.emprendimiento?' – '+r.emprendimiento:'')+(saldoR>0.005?` <small style="color:var(--red)">(saldo €${saldoR.toFixed(2)})</small>`:'');
+      btns=`<button class="btn btn-wa btn-sm" data-hw="${r.id}">📲</button>${saldoR>0.005?`<button class="btn btn-s btn-sm" data-habono="${r.id}">💰</button>`:''}<button class="btn btn-w btn-sm" data-hew="${r.id}">✏️</button><button class="btn btn-d" data-hdv="${r.id}">🗑</button>`;
+    }
     else if(r.tipo==='cotizacion'){badge='<span class="badge bg-y">Cotización</span>';desc=r.cliente;btns=`<button class="btn btn-s btn-sm" data-hcv="${r.id}">💰</button><button class="btn btn-w btn-sm" data-hce="${r.id}">✏️</button><button class="btn btn-d" data-hcd="${r.id}">🗑</button>`;}
     else{badge='<span class="badge bg-r">Gasto</span>';desc=r.desc+(r.comercio?' @ '+r.comercio:'');btns=`<button class="btn btn-w btn-sm" data-eg="${r.id}">✏️</button><button class="btn btn-d" data-hdg="${r.id}">🗑</button>`;}
     h+=`<tr><td>${fmtF(r.fecha)}</td><td>${badge}</td><td>${desc}</td><td>€${(r.totalEuro||r.euro||0).toFixed(2)}</td><td style="white-space:nowrap">${btns}</td></tr>`;
@@ -1196,6 +1288,7 @@ function renderHistorial(){
   const el=$('historialContent');
   el.querySelectorAll('[data-hw]').forEach(b=>b.addEventListener('click',()=>showWAModal(ventas.find(x=>x.id===b.dataset.hw))));
   el.querySelectorAll('[data-hew]').forEach(b=>b.addEventListener('click',()=>openEditVenta(b.dataset.hew)));
+  el.querySelectorAll('[data-habono]').forEach(b=>b.addEventListener('click',()=>abrirAbonoModal(b.dataset.habono)));
   el.querySelectorAll('[data-hdv]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('¿Eliminar venta?'))return;try{await db.collection('ventas').doc(b.dataset.hdv).delete();}catch(e){alert(e.message);}}));
   el.querySelectorAll('[data-hcv]').forEach(b=>b.addEventListener('click',()=>convertirAVenta(b.dataset.hcv)));
   el.querySelectorAll('[data-hce]').forEach(b=>b.addEventListener('click',()=>editarCotiz(b.dataset.hce)));
@@ -1219,6 +1312,34 @@ function openEditVenta(id){
   $('evC').onclick=closeModal;
 }
 
+function abrirAbonoModal(id){
+  const v=ventas.find(x=>x.id===id); if(!v) return;
+  const bcv=getBCV();
+  const saldoActual=v.saldo??Math.max(0,(v.totalEuro||0)-(v.abonado||0));
+  openModal('💰 Registrar abono – '+v.cliente,`
+    <div class="pbox"><div style="font-size:.85rem">Saldo pendiente: <strong style="color:var(--red)">€${saldoActual.toFixed(2)}</strong>${bcv?' · Bs '+(saldoActual*bcv).toLocaleString('es-VE',{maximumFractionDigits:0}):''}</div></div>
+    <div class="row"><div><label>Monto abonado (€)</label><input type="number" id="abMonto" step="0.01" placeholder="0.00"/></div>
+    <div><label>Fecha</label><input type="date" id="abFecha" value="${new Date().toISOString().split('T')[0]}"/></div></div>
+    <div class="row r1"><label>Nota</label><input id="abNota" placeholder="Ej: Pago móvil, efectivo..."/></div>`,
+    `<button class="btn btn-p" id="abSave">💾 Registrar abono</button><button class="btn" style="background:#eee;margin-left:6px" id="abClose">Cancelar</button>`);
+  $('abSave').onclick=async()=>{
+    const monto=parseFloat(g('abMonto'))||0;
+    if(monto<=0){alert('Ingresa un monto válido');return;}
+    if(monto>saldoActual+0.01){if(!confirm('El monto supera el saldo pendiente. ¿Continuar de todos modos?'))return;}
+    const fd=g('abFecha'); const fecha=fd?new Date(fd+'T12:00:00').toISOString():new Date().toISOString();
+    const nuevoAbono={fecha,montoEuro:monto,montoBs:bcv?monto*bcv:null,tasa:bcv,nota:$('abNota').value.trim()};
+    const nuevosAbonos=[...(v.abonos||[]),nuevoAbono];
+    const nuevoAbonado=(v.abonado||0)+monto;
+    const nuevoSaldo=Math.max(0,(v.totalEuro||0)-nuevoAbonado);
+    const nuevoPagoEstado=nuevoSaldo<=0.005?'pagado':'parcial';
+    try{
+      await db.collection('ventas').doc(id).update({abonos:nuevosAbonos,abonado:nuevoAbonado,saldo:nuevoSaldo,pagoEstado:nuevoPagoEstado});
+      closeModal(); alert('✅ Abono registrado. Saldo restante: €'+nuevoSaldo.toFixed(2));
+    }catch(e){alert('Error: '+e.message);}
+  };
+  $('abClose').onclick=closeModal;
+}
+
 // ── PEDIDOS ───────────────────────────────────────────────
 function renderPedidos(){
   const filtro=g('pedidoFiltro')||'activos';
@@ -1231,9 +1352,11 @@ function renderPedidos(){
     const steps=v.status||[],prog=steps.filter(s=>s.done).length,tot=steps.length,pct=tot?Math.round(prog/tot*100):0;
     const isDone=prog===tot,ai=steps.findIndex(s=>!s.done),as=ai>=0?steps[ai]:steps[steps.length-1];
     const badge=isDone?'<span class="badge bg-g">✅ Completo</span>':`<span class="badge bg-r">🔴 ${as?.name||'–'}</span>`;
+    const saldoV=v.saldo??0;
+    const saldoBadge = saldoV>0.005 ? `<span class="badge bg-r" style="margin-left:4px">💰 Debe €${saldoV.toFixed(2)}</span>` : (v.tipo==='venta' ? `<span class="badge bg-g" style="margin-left:4px">✅ Pagado</span>` : '');
     h+=`<div class="pc">
     <div style="display:flex;justify-content:space-between;cursor:pointer" data-ptog="${v.id}">
-      <div><div style="font-weight:700">${v.cliente}${v.emprendimiento?' – '+v.emprendimiento:''}</div>
+      <div><div style="font-weight:700">${v.cliente}${v.emprendimiento?' – '+v.emprendimiento:''}${saldoBadge}</div>
       <div style="font-size:.72rem;color:var(--gray)">${(v.items||[]).map(it=>`${it.desc||'ítem'} x${it.cant}`).join(' | ')} | €${v.totalEuro?.toFixed(2)||'–'}</div>
       <div style="font-size:.72rem;color:var(--gray)">Entrega: ${v.entregaStr||'–'}${v.envio?' | '+v.envio:''}</div></div>
       <div style="text-align:right">${badge}<br><small style="color:#aaa">${prog}/${tot} pasos</small></div>
@@ -1241,11 +1364,15 @@ function renderPedidos(){
     <div class="pb"><div class="pf" style="width:${pct}%;background:${isDone?'var(--green)':'var(--accent)'}"></div></div>
     <div class="pd" id="pd_${v.id}">
       ${steps.map((s,i)=>{const d=s.done,a=i===ai;return `<div class="si${d?' done':a?' act':''}" data-st="${v.id}" data-si="${i}"><div class="sc">${d?'✓':a?'●':i+1}</div><div style="flex:1;font-size:.8rem">${s.name}</div><small style="color:#aaa">${d?'✅ Hecho':a?'🔴 En curso':'⬜'}</small></div>`;}).join('')}
-      <div style="display:flex;gap:7px;margin-top:10px"><button class="btn btn-wa btn-sm" data-pw="${v.id}">📲 WA</button></div>
+      <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn btn-wa btn-sm" data-pw="${v.id}">📲 WA</button>
+        ${saldoV>0.005?`<button class="btn btn-s btn-sm" data-abonar="${v.id}">💰 Registrar abono</button>`:''}
+      </div>
     </div></div>`;
   });
   el.innerHTML=h;
   el.querySelectorAll('[data-ptog]').forEach(b=>b.addEventListener('click',()=>{const d=$('pd_'+b.dataset.ptog);if(d)d.classList.toggle('open');}));
+  el.querySelectorAll('[data-abonar]').forEach(b=>b.addEventListener('click',(e)=>{e.stopPropagation();abrirAbonoModal(b.dataset.abonar);}));
   el.querySelectorAll('[data-st]').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();
     const v2=ventas.find(x=>x.id===b.dataset.st),si=parseInt(b.dataset.si);if(!v2?.status)return;
