@@ -140,7 +140,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
     <div class="rrow"><input type="checkbox" id="rememberMe"/><label for="rememberMe">Recordar sesión</label></div>
     <button id="loginBtn">Ingresar al Sistema</button>
     <div class="lerr" id="loginErr"></div>
-    <div style="margin-top:16px;font-size:.65rem;color:#aaa">v1.2</div>
+    <div style="margin-top:16px;font-size:.65rem;color:#aaa">v1.3</div>
   </div>
 </div>
 
@@ -221,8 +221,60 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
         <div><label>Recibe (C.I.)</label><input id="vRecibeCI"/></div>
       </div>
 
-      <div style="margin:10px 0 6px;font-size:.8rem;font-weight:700">📦 Ítems del pedido <button class="btn btn-s btn-sm" id="btnAddItem">+ Agregar ítem</button></div>
-      <div id="itemsContainer"></div>
+      <div style="margin:10px 0 6px;font-size:.8rem;font-weight:700">📦 Agregar producto al pedido</div>
+      <div class="ic" id="itemPicker">
+        <div class="row r3">
+          <div><label>Producto / Servicio *</label>
+            <select id="pkProd">
+              <option value="">– Seleccionar –</option>
+              <option value="_libre">✏️ Libre (sin catálogo)</option>
+              <optgroup label="── Bolsas principales ──">
+                <option value="_bolsa_pequena">🛍️ Bolsa Pequeña (15x23)</option>
+                <option value="_bolsa_mediana">🛍️ Bolsa Mediana (20x30)</option>
+                <option value="_bolsa_grande">🛍️ Bolsa Grande (30x40)</option>
+              </optgroup>
+              <optgroup label="── Catálogo ──" id="pkCatalogoGroup"></optgroup>
+            </select>
+          </div>
+          <div id="pkLibreBox" style="display:none"><label>Descripción libre</label><input id="pkLibre" placeholder="Nombre del ítem"/></div>
+          <div><label>Cantidad *</label><input type="number" id="pkCant" min="100" step="50" value="100"/></div>
+        </div>
+        <div id="pkEscala" style="display:none" class="precio-escala">
+          <strong style="font-size:.72rem">📊 Precio escalonado:</strong>
+          <table id="pkEscalaTable"></table>
+        </div>
+        <div class="row r4">
+          <div><label>Color bolsa</label>
+            <select id="pkColSel">
+              ${COLORES_DEFAULT.map(c=>`<option>${c}</option>`).join('')}
+              <option value="_otro">Otro...</option>
+            </select>
+          </div>
+          <div id="pkColOtroBox" style="display:none"><label>Color bolsa (otro)</label><input id="pkColOtro"/></div>
+          <div><label>Color tinta</label>
+            <select id="pkTintaSel">
+              <option value="Dorada">Dorada</option><option value="Plateada">Plateada</option><option value="Negra">Negra</option><option value="Blanca">Blanca</option><option value="Roja">Roja</option><option value="Azul">Azul</option><option value="Verde">Verde</option><option value="Rosada">Rosada</option><option value="_otro">Otro...</option>
+            </select>
+          </div>
+          <div id="pkTintaOtroBox" style="display:none"><label>Color tinta (otro)</label><input id="pkTintaOtro"/></div>
+        </div>
+        <div class="row r3">
+          <div><label>Precio unitario (€)</label><input type="number" id="pkPrecio" step="0.01" placeholder="Auto"/></div>
+          <div style="grid-column:span 2"><label>Nota (diseño, instrucciones...)</label><input id="pkNota"/></div>
+        </div>
+        <div class="pbox" id="pkPreview" style="display:none;padding:6px">
+          <span id="pkPreviewEuro" style="font-weight:700;font-size:1rem"></span>
+          <span id="pkPreviewBs" style="color:var(--gray);font-size:.78rem;margin-left:6px"></span>
+          <div id="pkPreviewTarifa" style="font-size:.68rem;color:var(--accent);margin-top:2px"></div>
+        </div>
+        <button class="btn btn-s btn-sm" id="btnAddItem" style="margin-top:8px">➕ Agregar al pedido</button>
+      </div>
+      <div style="margin:14px 0 6px;font-size:.8rem;font-weight:700">🧾 Productos en este pedido</div>
+      <div class="empty" id="itemsListEmpty" style="padding:16px">Aún no has agregado productos</div>
+      <div class="tw" id="itemsListWrap" style="display:none"><table>
+        <thead><tr><th>Producto</th><th>Detalle</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody id="itemsListBody"></tbody>
+      </table></div>
       <div class="row r3" style="margin-top:8px">
         <div><label>Descuento (€)</label><input type="number" id="vDescuento" step="0.01" placeholder="0.00"/></div>
         <div><label>Estado de pago</label><select id="vPagoEstado">
@@ -651,7 +703,7 @@ function showSection(id){
   document.querySelectorAll('#mainNav button,#mobileNav button').forEach(b=>b.classList.toggle('active',b.dataset.s===id));
   const s=$('sec-'+id);if(s)s.classList.add('active');
   history.pushState({section:id},'',' ');
-  if(id==='ventas'){initBuscadorCliente();}
+  if(id==='ventas'){initBuscadorCliente();refreshPickerCatalogo();}
   if(id==='gastos'&&!gItemCnt)addGastoItem();
   if(id==='recordatorios')renderRecordatorios();
   if(id==='herramientas')showHerrTab('crono');
@@ -670,7 +722,7 @@ window.addEventListener('popstate',()=>{
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('#mainNav button,#mobileNav button').forEach(b=>b.classList.toggle('active',b.dataset.s===prev));
   const s=$('sec-'+prev);if(s)s.classList.add('active');
-  if(prev==='ventas'){initBuscadorCliente();}
+  if(prev==='ventas'){initBuscadorCliente();refreshPickerCatalogo();}
   if(prev==='herramientas')showHerrTab('crono');
   renderSection(prev);
 });
@@ -681,7 +733,7 @@ function renderSection(id){
   if(id==='pedidos')renderPedidos();
   if(id==='usuarios')renderUsuarios();
   if(id==='inventario')renderInventario();
-  if(id==='ventas')renderCotizaciones();
+  if(id==='ventas'){renderCotizaciones();refreshPickerCatalogo();}
   if(id==='gastos')renderGastosLista();
 }
 function refreshAll(){const a=document.querySelector('.section.active');if(!a)return;renderSection(a.id.replace('sec-',''));}
@@ -833,84 +885,18 @@ function renderInventario(){
 }
 
 // ── ITEMS VENTA ───────────────────────────────────────────
-function addItem(){
-  itemCnt++;const id=itemCnt;
+let currentItems=[];
+
+function buildProductoOptions(){
   const vendibles=inventario.filter(i=>i.tipo!=='consumible'&&i.tipo!=='solvente'&&i.tipo!=='emulsion'&&i.tipo!=='malla');
-  const opts=vendibles.map(p=>`<option value="${p.id}" data-precio="${p.precio||0}">${p.nombre}${p.medida?' ('+p.medida+')':''}${p.color?' – '+p.color:''}</option>`).join('');
-  const div=document.createElement('div');div.id='item_'+id;div.className='ic';
-  div.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:7px">
-    <span style="font-size:.78rem;font-weight:700;color:var(--accent)">Ítem #${id}</span>
-    <button class="btn btn-d" data-rm="${id}">✕</button>
-  </div>
-  <div class="row r3">
-    <div><label>Producto / Servicio *</label>
-      <select data-prod="${id}">
-        <option value="">– Seleccionar –</option>
-        <option value="_libre">✏️ Libre (sin catálogo)</option>
-        <optgroup label="── Bolsas principales ──">
-          <option value="_bolsa_pequena" data-tam="pequena">🛍️ Bolsa Pequeña (15x23)</option>
-          <option value="_bolsa_mediana" data-tam="mediana">🛍️ Bolsa Mediana (20x30)</option>
-          <option value="_bolsa_grande" data-tam="grande">🛍️ Bolsa Grande (30x40)</option>
-        </optgroup>
-        ${opts?`<optgroup label="── Catálogo ──">${opts}</optgroup>`:''}
-      </select>
-    </div>
-    <div id="iLibre_${id}" style="display:none"><label>Descripción libre</label><input data-libre="${id}" placeholder="Nombre del ítem"/></div>
-    <div><label>Cantidad *</label><input type="number" data-cant="${id}" min="100" step="50" value="100"/></div>
-  </div>
-  <div id="iEscala_${id}" style="display:none" class="precio-escala">
-    <strong style="font-size:.72rem">📊 Precio escalonado:</strong>
-    <table id="iEscalaTable_${id}"></table>
-  </div>
-  <div class="row r4">
-    <div><label>Color bolsa</label>
-      <select data-colsel="${id}">
-        ${COLORES_DEFAULT.map(c=>`<option>${c}</option>`).join('')}
-        <option value="_otro">Otro...</option>
-      </select>
-    </div>
-    <div id="iColOtro_${id}" style="display:none"><label>Color bolsa (otro)</label><input data-colcust="${id}"/></div>
-    <div><label>Color tinta</label>
-      <select data-tintasel="${id}">
-        <option value="Dorada">Dorada</option><option value="Plateada">Plateada</option><option value="Negra">Negra</option><option value="Blanca">Blanca</option><option value="Roja">Roja</option><option value="Azul">Azul</option><option value="Verde">Verde</option><option value="Rosada">Rosada</option><option value="_otro">Otro...</option>
-      </select>
-    </div>
-    <div id="iTintaOtro_${id}" style="display:none"><label>Color tinta (otro)</label><input data-tintacust="${id}"/></div>
-  </div>
-  <div class="row r3">
-    <div><label>Precio unitario (€)</label><input type="number" data-precio="${id}" step="0.01" placeholder="Auto" readonly style="background:#f0f4f6"/></div>
-    <div style="grid-column:span 2"><label>Nota (diseño, instrucciones...)</label><input data-nota="${id}"/></div>
-  </div>
-  <div class="pbox" id="iprice_${id}" style="display:none;padding:6px">
-    <span id="ieuro_${id}" style="font-weight:700;font-size:1rem"></span>
-    <span id="ibs_${id}" style="color:var(--gray);font-size:.78rem;margin-left:6px"></span>
-    <div id="itarifa_${id}" style="font-size:.68rem;color:var(--accent);margin-top:2px"></div>
-  </div>`;
-  div.querySelector('[data-rm]').addEventListener('click',()=>{div.remove();recalcItems();});
-  div.querySelector('[data-prod]').addEventListener('change',function(){
-    const lib=document.getElementById('iLibre_'+id);
-    const isBolsa=this.value.startsWith('_bolsa_');
-    const isLibre=this.value==='_libre';
-    if(lib)lib.style.display=isLibre?'block':'none';
-    const pe=div.querySelector('[data-precio]');
-    if(pe){pe.readOnly=isBolsa;pe.style.background=isBolsa?'#f0f4f6':'#fff';}
-    if(!isBolsa&&!isLibre){const opt=this.options[this.selectedIndex];const pr=parseFloat(opt?.dataset?.precio||0);if(pr>0&&pe)pe.value=pr.toFixed(2);}
-    document.getElementById('iEscala_'+id).style.display=isBolsa?'block':'none';
-    recalcItem(id);
-  });
-  div.querySelector('[data-colsel]').addEventListener('change',function(){const cc=document.getElementById('iColOtro_'+id);if(cc)cc.style.display=this.value==='_otro'?'block':'none';});
-  div.querySelector('[data-tintasel]').addEventListener('change',function(){const cc=document.getElementById('iTintaOtro_'+id);if(cc)cc.style.display=this.value==='_otro'?'block':'none';});
-  div.querySelector('[data-cant]').addEventListener('input',()=>recalcItem(id));
-  $('itemsContainer').appendChild(div);
+  return vendibles.map(p=>`<option value="${p.id}" data-precio="${p.precio||0}">${p.nombre}${p.medida?' ('+p.medida+')':''}${p.color?' – '+p.color:''}</option>`).join('');
 }
-$('btnAddItem').addEventListener('click',addItem);
-$('vDescuento').addEventListener('input',recalcItems);
-$('vPagoEstado').addEventListener('change',()=>{
-  $('vAbonoBox').style.display = g('vPagoEstado')==='parcial' ? 'block' : 'none';
-  recalcItems();
-});
-$('vAbonoMonto').addEventListener('input',recalcItems);
-$('vMontoManual').addEventListener('input',recalcItems);
+function refreshPickerCatalogo(){
+  const grp=$('pkCatalogoGroup'); if(!grp) return;
+  const sel=grp.closest('select'); const prev=sel?sel.value:'';
+  grp.innerHTML=buildProductoOptions();
+  if(sel&&prev) sel.value=prev;
+}
 
 function getTamKey(prodVal){
   if(prodVal==='_bolsa_pequena')return 'pequena';
@@ -920,54 +906,132 @@ function getTamKey(prodVal){
   if(p?.medida){if(p.medida.includes('15x23'))return 'pequena';if(p.medida.includes('20x30'))return 'mediana';if(p.medida.includes('30x40'))return 'grande';}
   return null;
 }
-function recalcItem(id){
-  const el=$('item_'+id);if(!el)return;
-  const prodVal=el.querySelector('[data-prod]')?.value||'';
-  const cant=parseInt(el.querySelector('[data-cant]')?.value)||0;
-  const pe=el.querySelector('[data-precio]');
-  const pb=$('iprice_'+id);
+
+$('pkProd').addEventListener('change',function(){
+  const isBolsa=this.value.startsWith('_bolsa_');
+  const isLibre=this.value==='_libre';
+  $('pkLibreBox').style.display=isLibre?'block':'none';
+  const pe=$('pkPrecio');
+  pe.readOnly=isBolsa; pe.style.background=isBolsa?'#f0f4f6':'#fff';
+  if(!isBolsa&&!isLibre){const opt=this.options[this.selectedIndex];const pr=parseFloat(opt?.dataset?.precio||0);if(pr>0)pe.value=pr.toFixed(2);}
+  $('pkEscala').style.display=isBolsa?'block':'none';
+  calcPickerPreview();
+});
+$('pkCant').addEventListener('input',calcPickerPreview);
+$('pkPrecio').addEventListener('input',calcPickerPreview);
+$('pkColSel').addEventListener('change',function(){$('pkColOtroBox').style.display=this.value==='_otro'?'block':'none';});
+$('pkTintaSel').addEventListener('change',function(){$('pkTintaOtroBox').style.display=this.value==='_otro'?'block':'none';});
+
+function calcPickerPreview(){
+  const prodVal=g('pkProd');
+  const cant=parseInt(g('pkCant'))||0;
   const tamKey=getTamKey(prodVal);
+  const pb=$('pkPreview');
   if(tamKey&&cant>=100){
     const calc=calcPrecioBolsa(tamKey,cant);
-    if(calc&&pe){pe.value=calc.unitario.toFixed(4);}
-    const tbl=$('iEscalaTable_'+id);
+    if(calc)$('pkPrecio').value=calc.unitario.toFixed(4);
+    const tbl=$('pkEscalaTable');
     if(tbl&&PRECIOS_BOLSAS[tamKey]){
       tbl.innerHTML=PRECIOS_BOLSAS[tamKey].precios.map(p=>{
         const nivelActivo=cant>=p.min&&cant<=p.max;
         return `<tr class="${nivelActivo?'activo':''}"><td>${p.min===1000?'1000+':p.min+' – '+p.max} uds</td><td style="padding-left:10px">€${p.precio} / ${p.por} uds</td><td style="padding-left:10px;color:#aaa">(€${(p.precio/p.por).toFixed(4)}/u)</td>${nivelActivo?'<td>✅</td>':'<td></td>'}</tr>`;
       }).join('');
     }
-    if(calc&&pb){
+    if(calc){
       pb.style.display='block';
-      $('ieuro_'+id).textContent='€'+calc.total.toFixed(2);
-      const bcv=getBCV();$('ibs_'+id).textContent=bcv?'· Bs '+(calc.total*bcv).toLocaleString('es-VE',{minimumFractionDigits:0}):'';
+      $('pkPreviewEuro').textContent='€'+calc.total.toFixed(2);
+      const bcv=getBCV();$('pkPreviewBs').textContent=bcv?'· Bs '+(calc.total*bcv).toLocaleString('es-VE',{minimumFractionDigits:0}):'';
       const tarifa=cant<500?'Precio al detal':cant<1000?'Precio mayor intermedio':'Precio al mayor';
-      $('itarifa_'+id).textContent='📊 '+tarifa;
+      $('pkPreviewTarifa').textContent='📊 '+tarifa;
     }
   } else if(!tamKey){
-    const precio=parseFloat(pe?.value)||0;
-    if(cant>0&&precio>0&&pb){
+    const precio=parseFloat(g('pkPrecio'))||0;
+    if(cant>0&&precio>0){
       const total=cant*precio;
       pb.style.display='block';
-      $('ieuro_'+id).textContent='€'+total.toFixed(2);
-      const bcv=getBCV();$('ibs_'+id).textContent=bcv?'· Bs '+(total*bcv).toLocaleString('es-VE',{minimumFractionDigits:0}):'';
-      $('itarifa_'+id).textContent='';
-    } else if(pb) pb.style.display='none';
-  } else { if(pb)pb.style.display='none'; }
+      $('pkPreviewEuro').textContent='€'+total.toFixed(2);
+      const bcv=getBCV();$('pkPreviewBs').textContent=bcv?'· Bs '+(total*bcv).toLocaleString('es-VE',{minimumFractionDigits:0}):'';
+      $('pkPreviewTarifa').textContent='';
+    } else pb.style.display='none';
+  } else pb.style.display='none';
+}
+
+function buildItemFromPicker(){
+  const prodVal=g('pkProd');
+  const cant=parseInt(g('pkCant'))||0;
+  if(!prodVal){alert('Selecciona un producto o servicio.');return null;}
+  if(cant<=0){alert('Ingresa una cantidad válida.');return null;}
+  const tamKey=getTamKey(prodVal);
+  let precio=0,total=0,desc='';
+  if(tamKey&&cant>=100){
+    const calc=calcPrecioBolsa(tamKey,cant);
+    if(!calc){alert('No se pudo calcular el precio para esa cantidad.');return null;}
+    precio=calc.unitario;total=calc.total;
+    const colSel=g('pkColSel');
+    const colTxt = colSel==='_otro' ? g('pkColOtro') : colSel;
+    desc=PRECIOS_BOLSAS[tamKey]?.nombre+(colTxt?' – '+colTxt:'');
+  } else {
+    precio=parseFloat(g('pkPrecio'))||0;
+    total=cant*precio;
+    if(prodVal==='_libre') desc=g('pkLibre')||'Ítem libre';
+    else{const p=inventario.find(x=>x.id===prodVal);desc=p?(p.nombre+(p.medida?' ('+p.medida+')':'')):'';}
+  }
+  if(total<=0){alert('Verifica el precio: el subtotal debe ser mayor a 0.');return null;}
+  const color = g('pkColSel')==='_otro' ? g('pkColOtro') : g('pkColSel');
+  const tinta = g('pkTintaSel')==='_otro' ? g('pkTintaOtro') : g('pkTintaSel');
+  return {prodId:prodVal.startsWith('_')?'':prodVal,tamKey:tamKey||'',desc,cant,precio,color,tinta,nota:g('pkNota')||'',total};
+}
+
+$('btnAddItem').addEventListener('click',()=>{
+  const item=buildItemFromPicker();
+  if(!item) return;
+  currentItems.push(item);
+  limpiarPicker();
+  renderItemsList();
+});
+
+function limpiarPicker(){
+  sv('pkProd','');sv('pkLibre','');sv('pkCant','100');sv('pkPrecio','');sv('pkNota','');
+  sv('pkColSel','Blanca');sv('pkColOtro','');sv('pkTintaSel','Dorada');sv('pkTintaOtro','');
+  $('pkLibreBox').style.display='none';$('pkColOtroBox').style.display='none';$('pkTintaOtroBox').style.display='none';
+  $('pkEscala').style.display='none';$('pkPreview').style.display='none';
+  const pe=$('pkPrecio'); pe.readOnly=false; pe.style.background='#fff';
+}
+
+function renderItemsList(){
+  const tbody=$('itemsListBody');
+  const empty=$('itemsListEmpty');
+  const wrap=$('itemsListWrap');
+  if(!currentItems.length){
+    tbody.innerHTML='';
+    empty.style.display='block';
+    wrap.style.display='none';
+  } else {
+    empty.style.display='none';
+    wrap.style.display='block';
+    tbody.innerHTML=currentItems.map((it,i)=>{
+      const detalle=[it.color&&it.color!=='Blanca'?it.color:'',it.tinta?'Tinta '+it.tinta:'',it.nota?'📝 '+it.nota:''].filter(Boolean).join(' · ')||'–';
+      return `<tr><td><strong>${it.desc}</strong></td><td style="font-size:.72rem;color:var(--gray)">${detalle}</td><td>${it.cant}</td><td><b>€${it.total.toFixed(2)}</b></td><td><button class="btn btn-d btn-sm" data-rmit="${i}">✕</button></td></tr>`;
+    }).join('');
+    tbody.querySelectorAll('[data-rmit]').forEach(b=>b.addEventListener('click',()=>{
+      currentItems.splice(parseInt(b.dataset.rmit),1);
+      renderItemsList();
+    }));
+  }
   recalcItems();
 }
+
+$('vDescuento').addEventListener('input',recalcItems);
+$('vPagoEstado').addEventListener('change',()=>{
+  $('vAbonoBox').style.display = g('vPagoEstado')==='parcial' ? 'block' : 'none';
+  recalcItems();
+});
+$('vAbonoMonto').addEventListener('input',recalcItems);
+$('vMontoManual').addEventListener('input',recalcItems);
+
 function recalcItems(){
-  let total=0,count=0;
-  document.querySelectorAll('#itemsContainer [id^="item_"]').forEach(el=>{
-    const id=el.id.split('_')[1];
-    const prodVal=el.querySelector('[data-prod]')?.value||'';
-    const cant=parseInt(el.querySelector('[data-cant]')?.value)||0;
-    const tamKey=getTamKey(prodVal);
-    let subtotal=0;
-    if(tamKey&&cant>=100){const calc=calcPrecioBolsa(tamKey,cant);if(calc)subtotal=calc.total;}
-    else{const precio=parseFloat(el.querySelector('[data-precio]')?.value)||0;subtotal=cant*precio;}
-    if(subtotal>0){total+=subtotal;count++;}
-  });
+  const total=currentItems.reduce((a,i)=>a+i.total,0);
+  const count=currentItems.length;
   const descuento=Math.max(0,parseFloat(g('vDescuento'))||0);
   const manualRaw=g('vMontoManual');
   const usarManual = manualRaw!=='' && !isNaN(parseFloat(manualRaw));
@@ -994,31 +1058,7 @@ function recalcItems(){
   }
   else $('totalBox').style.display='none';
 }
-function getItemColor(id){const sel=document.querySelector(`[data-colsel="${id}"]`)?.value;return sel==='_otro'?(document.querySelector(`[data-colcust="${id}"]`)?.value||''):sel||'';}
-function getItems(){
-  const items=[];
-  document.querySelectorAll('#itemsContainer [id^="item_"]').forEach(el=>{
-    const id=el.id.split('_')[1];
-    const prodVal=el.querySelector('[data-prod]')?.value||'';
-    const cant=parseInt(el.querySelector('[data-cant]')?.value)||0;
-    const tamKey=getTamKey(prodVal);
-    let precio=0,total=0,desc='';
-    if(tamKey&&cant>=100){
-      const calc=calcPrecioBolsa(tamKey,cant);
-      if(calc){precio=calc.unitario;total=calc.total;}
-      desc=PRECIOS_BOLSAS[tamKey]?.nombre+(el.querySelector('[data-colsel]')?.value&&el.querySelector('[data-colsel]').value!=='_otro'?' – '+el.querySelector('[data-colsel]').value:el.querySelector('[data-colcust]')?.value?' – '+el.querySelector('[data-colcust]').value:'');
-    } else {
-      precio=parseFloat(el.querySelector('[data-precio]')?.value)||0;
-      total=cant*precio;
-      if(prodVal==='_libre')desc=el.querySelector('[data-libre]')?.value||'';
-      else{const p=inventario.find(x=>x.id===prodVal);desc=p?(p.nombre+(p.medida?' ('+p.medida+')':'')):(el.querySelector('[data-prod]')?.options[el.querySelector('[data-prod]')?.selectedIndex]?.text||'');}
-    }
-    const color=el.querySelector('[data-colsel]')?.value==='_otro'?el.querySelector('[data-colcust]')?.value||'':el.querySelector('[data-colsel]')?.value||'';
-    const tinta=el.querySelector('[data-tintasel]')?.value==='_otro'?el.querySelector('[data-tintacust]')?.value||'':el.querySelector('[data-tintasel]')?.value||'';
-    if(cant>0&&total>0)items.push({prodId:prodVal.startsWith('_')?'':prodVal,tamKey:tamKey||'',desc,cant,precio,color,tinta,nota:el.querySelector('[data-nota]')?.value||'',total});
-  });
-  return items;
-}
+function getItems(){ return currentItems; }
 function buildClientesList(){const dl=$('clientesList');if(!dl)return;dl.innerHTML='';clientes.forEach(c=>{const o=document.createElement('option');o.value=c.nombre;dl.appendChild(o);});}
 
 // ── BUSCADOR DE CLIENTE EXISTENTE ─────────────────────────
@@ -1061,28 +1101,15 @@ function cargarDatosCliente(cli, ultimaVenta){
   sv('vCliente',cli.nombre);sv('vEmprendimiento',cli.emprendimiento||'');sv('vInstagram',cli.instagram||'');sv('vTelefono',cli.telefono||'');sv('vRif',cli.rif||'');sv('vCiudad',cli.ciudad||'');sv('vEnvio',cli.envio||'');sv('vOficina',cli.oficina||'');sv('vRecibeNombre',cli.recibeNombre||'');sv('vRecibeTelefono',cli.recibeTelefono||'');sv('vRecibeCI',cli.recibeCI||'');
   $('cliSuggest').classList.remove('visible');
   if(ultimaVenta&&ultimaVenta.items?.length){
-    $('itemsContainer').innerHTML='';itemCnt=0;
-    ultimaVenta.items.forEach(it=>{
-      addItem();const id2=itemCnt;const el=$('item_'+id2);
-      const ps=el.querySelector('[data-prod]');
-      if(ps){
-        if(it.tamKey){ps.value='_bolsa_'+it.tamKey;document.getElementById('iEscala_'+id2).style.display='block';}
-        else{const exists=inventario.find(x=>x.id===it.prodId);if(it.prodId&&exists)ps.value=it.prodId;else{ps.value='_libre';const lib=document.getElementById('iLibre_'+id2);if(lib)lib.style.display='block';const ld=el.querySelector('[data-libre]');if(ld)ld.value=it.desc||'';}}
-        ps.dispatchEvent(new Event('change'));
-      }
-      const ce=el.querySelector('[data-cant]');if(ce){ce.value=it.cant;ce.dispatchEvent(new Event('input'));}
-      if(it.color){const cs=el.querySelector('[data-colsel]');if(cs){const esDef=COLORES_DEFAULT.includes(it.color);if(esDef)cs.value=it.color;else{cs.value='_otro';const cc=document.getElementById('iColOtro_'+id2);if(cc)cc.style.display='block';const ccu=el.querySelector('[data-colcust]');if(ccu)ccu.value=it.color;}}}
-      if(it.tinta){const ts=el.querySelector('[data-tintasel]');if(ts){const esDef=[...ts.options].find(o=>o.value===it.tinta);if(esDef)ts.value=it.tinta;else{ts.value='_otro';const tc=document.getElementById('iTintaOtro_'+id2);if(tc)tc.style.display='block';const tcu=el.querySelector('[data-tintacust]');if(tcu)tcu.value=it.tinta;}}}
-      const ne=el.querySelector('[data-nota]');if(ne)ne.value=it.nota||'';
-      recalcItem(id2);
-    });
+    currentItems=ultimaVenta.items.map(it=>({...it}));
+    renderItemsList();
     alert(`✅ Datos de ${cli.nombre} cargados.\n\n📦 Último pedido (${fmtF(ultimaVenta.fecha)}):\n${ultimaVenta.items.map(it=>`• ${it.desc} x${it.cant}${it.color?' ('+it.color+')':''}`).join('\n')}\n\nTotal anterior: €${ultimaVenta.totalEuro?.toFixed(2)||'–'}`);
   } else { alert(`✅ Datos de ${cli.nombre} cargados.\nSin pedidos previos.`); }
 }
 
 function limpiarVentaForm(){
   ['vCliente','vEmprendimiento','vInstagram','vTelefono','vRif','vCiudad','vOficina','vNotas','vRecibeNombre','vRecibeTelefono','vRecibeCI','vDescuento','vAbonoMonto','vMontoManual'].forEach(id=>sv(id,''));
-  sv('vEnvio','');sv('vFechaEntrega','');sv('vPagoEstado','pagado');$('vAbonoBox').style.display='none';$('itemsContainer').innerHTML='';itemCnt=0;$('totalBox').style.display='none';sv('ventaEditId','');$('ventaFormTitle').textContent='🛍️ Nueva Cotización / Venta';lastVenta=null;
+  sv('vEnvio','');sv('vFechaEntrega','');sv('vPagoEstado','pagado');$('vAbonoBox').style.display='none';currentItems=[];limpiarPicker();renderItemsList();sv('ventaEditId','');$('ventaFormTitle').textContent='🛍️ Nueva Cotización / Venta';lastVenta=null;
   $('cliSuggest').classList.remove('visible');$('vClienteBuscar').value='';$('clienteDropdown').innerHTML='';clienteSugerido=null;
 }
 $('btnLimpiar').addEventListener('click',limpiarVentaForm);
@@ -1172,15 +1199,8 @@ function editarCotiz(id){
   sv('vCliente',c.cliente);sv('vEmprendimiento',c.emprendimiento);sv('vInstagram',c.ig);sv('vTelefono',c.telefono||'');sv('vRif',c.rif);sv('vCiudad',c.ciudad);sv('vOficina',c.oficina);sv('vNotas',c.notas);sv('vRecibeNombre',c.recibeNombre);sv('vRecibeTelefono',c.recibeTelefono);sv('vRecibeCI',c.recibeCI);sv('vEnvio',c.envio||'');sv('vFechaEntrega',c.entregaISO||'');
   sv('vDescuento', c.montoManual ? '' : (c.descuento||''));
   sv('vMontoManual', c.montoManual ? String(c.totalEuro??0) : '');
-  $('itemsContainer').innerHTML='';itemCnt=0;
-  (c.items||[]).forEach(it=>{
-    addItem();const id2=itemCnt;const el=$('item_'+id2);
-    const ps=el.querySelector('[data-prod]');
-    if(ps){if(it.tamKey){ps.value='_bolsa_'+it.tamKey;document.getElementById('iEscala_'+id2).style.display='block';}else{const exists=inventario.find(x=>x.id===it.prodId);if(it.prodId&&exists)ps.value=it.prodId;else{ps.value='_libre';document.getElementById('iLibre_'+id2).style.display='block';const ld=el.querySelector('[data-libre]');if(ld)ld.value=it.desc||'';}}}
-    const ce=el.querySelector('[data-cant]');if(ce)ce.value=it.cant;
-    const ne=el.querySelector('[data-nota]');if(ne)ne.value=it.nota||'';
-    recalcItem(id2);
-  });
+  currentItems=(c.items||[]).map(it=>({...it}));
+  renderItemsList();
   lastVenta=c;showSection('ventas');window.scrollTo(0,0);
 }
 
