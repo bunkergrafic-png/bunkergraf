@@ -140,7 +140,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
     <div class="rrow"><input type="checkbox" id="rememberMe"/><label for="rememberMe">Recordar sesión</label></div>
     <button id="loginBtn">Ingresar al Sistema</button>
     <div class="lerr" id="loginErr"></div>
-    <div style="margin-top:16px;font-size:.65rem;color:#aaa">v1.1</div>
+    <div style="margin-top:16px;font-size:.65rem;color:#aaa">v1.2</div>
   </div>
 </div>
 
@@ -763,9 +763,9 @@ $('btnSaveTasas').addEventListener('click', async ()=>{
 $('btnAutoTasaBCV').addEventListener('click', async ()=>{
   const btn=$('btnAutoTasaBCV'); btn.disabled=true; btn.textContent='⏳ Consultando...';
   try{
-    const r=await fetch('https://pydolarve.org/api/v1/dollar?page=bcv');
-    const d=await r.json();
-    const tasaEUR=d?.monitors?.euro?.price, tasaUSD=d?.monitors?.usd?.price;
+    const [rUSD,rEUR]=await Promise.all([fetch('https://ve.dolarapi.com/v1/dolares/oficial'),fetch('https://ve.dolarapi.com/v1/euros/oficial')]);
+    const [dUSD,dEUR]=await Promise.all([rUSD.json(),rEUR.json()]);
+    const tasaUSD=dUSD.promedio||dUSD.venta, tasaEUR=dEUR.promedio||dEUR.venta;
     if(tasaEUR){ if(!tasas.EUR) tasas.EUR={simbolo:'€',nombre:'Euro'}; tasas.EUR.valor=tasaEUR; }
     if(tasaUSD){ if(!tasas.USD) tasas.USD={simbolo:'$',nombre:'Dólar'}; tasas.USD.valor=tasaUSD; }
     renderTasasUI(); btn.textContent='✅ Actualizado'; setTimeout(()=>{btn.textContent='🔄 Auto BCV';btn.disabled=false;},2000);
