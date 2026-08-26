@@ -1947,10 +1947,15 @@ function abrirFormNuevoUsuario(){
   <div class="row r1"><div><label>Nombre *</label><input id="nuNombre" placeholder="Ej: Juan Pérez"/></div></div>
   <div class="row r1"><div><label>Correo *</label><input id="nuEmail" type="email" placeholder="usuario@bunkergrafico.com" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore/></div></div>
   <div class="row r1"><div><label>Contraseña *</label>
-    <div style="display:flex;gap:6px">
-      <input id="nuPass" type="text" value="${generarPassword()}" style="flex:1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-bwignore/>
-      <button type="button" class="btn btn-sm" style="background:#eee;color:#333" id="nuRegen">🎲 Generar</button>
+    <div id="nuPassAutoBox" style="display:flex;gap:6px;align-items:center">
+      <div id="nuPassDisplay" style="flex:1;background:var(--light);border-radius:7px;padding:8px 9px;font-family:monospace;font-size:.95rem;letter-spacing:1px">${generarPassword()}</div>
+      <button type="button" class="btn btn-sm" style="background:#eee;color:#333" id="nuCopiar">📋 Copiar</button>
+      <button type="button" class="btn btn-sm" style="background:#eee;color:#333" id="nuRegen">🎲</button>
     </div>
+    <div id="nuPassManualBox" style="display:none">
+      <input id="nuPass" type="text" style="width:100%" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-bwignore placeholder="Escribe la contraseña"/>
+    </div>
+    <div style="margin-top:4px"><a href="#" id="nuTogglePass" style="font-size:.72rem;color:var(--accent);text-decoration:underline">✏️ Prefiero escribir mi propia contraseña</a></div>
     <div class="info-note" style="margin-top:4px">Comparte este correo y contraseña con la persona — no se pueden volver a ver después de crear el usuario.</div>
   </div></div>
   <div class="row r1"><div><label>Rol</label><select id="nuRol">
@@ -1960,10 +1965,25 @@ function abrirFormNuevoUsuario(){
     <option value="owner">Propietario</option>
   </select></div></div>`,
   `<button class="btn btn-p" id="nuSave">💾 Crear usuario</button><button class="btn" style="background:#eee;margin-left:6px" id="nuClose">Cancelar</button>`);
-  $('nuRegen').onclick=()=>sv('nuPass',generarPassword());
+  let nuManualMode=false;
+  $('nuTogglePass').onclick=e=>{
+    e.preventDefault();
+    nuManualMode=!nuManualMode;
+    $('nuPassAutoBox').style.display=nuManualMode?'none':'flex';
+    $('nuPassManualBox').style.display=nuManualMode?'block':'none';
+    $('nuTogglePass').textContent=nuManualMode?'🎲 Usar una contraseña generada':'✏️ Prefiero escribir mi propia contraseña';
+    if(nuManualMode)$('nuPass').focus();
+  };
+  $('nuRegen').onclick=()=>{$('nuPassDisplay').textContent=generarPassword();};
+  $('nuCopiar').onclick=async()=>{
+    try{await navigator.clipboard.writeText($('nuPassDisplay').textContent);$('nuCopiar').textContent='✅ Copiado';setTimeout(()=>{if($('nuCopiar'))$('nuCopiar').textContent='📋 Copiar';},1500);}
+    catch(err){alert('No se pudo copiar automático. Contraseña: '+$('nuPassDisplay').textContent);}
+  };
   $('nuClose').onclick=closeModal;
   $('nuSave').onclick=async()=>{
-    const nombre=g('nuNombre').trim(),email=g('nuEmail').trim(),pass=g('nuPass'),rol=g('nuRol');
+    const nombre=g('nuNombre').trim(),email=g('nuEmail').trim();
+    const pass=nuManualMode?g('nuPass'):$('nuPassDisplay').textContent;
+    const rol=g('nuRol');
     if(!nombre||!email||!pass){alert('Completa nombre, correo y contraseña');return;}
     if(pass.length<6){alert('La contraseña debe tener al menos 6 caracteres');return;}
     const btn=$('nuSave');btn.disabled=true;btn.textContent='Creando...';
