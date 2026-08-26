@@ -1945,10 +1945,10 @@ function abrirFormNuevoUsuario(){
   if(CU.role!=='owner')return;
   openModal('➕ Nuevo usuario',`
   <div class="row r1"><div><label>Nombre *</label><input id="nuNombre" placeholder="Ej: Juan Pérez"/></div></div>
-  <div class="row r1"><div><label>Correo *</label><input id="nuEmail" type="email" placeholder="usuario@bunkergrafico.com"/></div></div>
+  <div class="row r1"><div><label>Correo *</label><input id="nuEmail" type="email" placeholder="usuario@bunkergrafico.com" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore/></div></div>
   <div class="row r1"><div><label>Contraseña *</label>
     <div style="display:flex;gap:6px">
-      <input id="nuPass" type="text" value="${generarPassword()}" style="flex:1"/>
+      <input id="nuPass" type="text" value="${generarPassword()}" style="flex:1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-bwignore/>
       <button type="button" class="btn btn-sm" style="background:#eee;color:#333" id="nuRegen">🎲 Generar</button>
     </div>
     <div class="info-note" style="margin-top:4px">Comparte este correo y contraseña con la persona — no se pueden volver a ver después de crear el usuario.</div>
