@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bunkergraf-v2';
+const CACHE_NAME = 'bunkergraf-v3';
 const FILES_TO_CACHE = [
   './',
   './index.html',
