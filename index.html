@@ -140,7 +140,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f7fafb;}
     <div class="rrow"><input type="checkbox" id="rememberMe"/><label for="rememberMe">Recordar sesión</label></div>
     <button id="loginBtn">Ingresar al Sistema</button>
     <div class="lerr" id="loginErr"></div>
-    <div style="margin-top:16px;font-size:.65rem;color:#aaa">v1.4</div>
+    <div style="margin-top:16px;font-size:.65rem;color:#aaa">v1.5</div>
   </div>
 </div>
 
@@ -1941,6 +1941,20 @@ function generarPassword(){
   let p='';for(let i=0;i<10;i++)p+=chars[Math.floor(Math.random()*chars.length)];
   return p;
 }
+function mostrarCredencialesCreadas(email,pass){
+  const texto=`Correo: ${email}\nContraseña: ${pass}`;
+  openModal('✅ Usuario creado',`
+  <div class="info-note">Comparte estos datos con la persona — no se pueden volver a ver después de cerrar esta ventana.</div>
+  <div style="background:var(--light);border-radius:8px;padding:10px;margin-top:10px;font-family:monospace;font-size:.85rem;line-height:1.8">
+    Correo: <strong>${email}</strong><br/>Contraseña: <strong>${pass}</strong>
+  </div>`,
+  `<button class="btn btn-p" id="ccCopiar">📋 Copiar usuario y clave</button><button class="btn" style="background:#eee;margin-left:6px" id="ccClose">Cerrar</button>`);
+  $('ccCopiar').onclick=async()=>{
+    try{await navigator.clipboard.writeText(texto);$('ccCopiar').textContent='✅ Copiado';setTimeout(()=>{if($('ccCopiar'))$('ccCopiar').textContent='📋 Copiar usuario y clave';},1500);}
+    catch(err){alert('No se pudo copiar automático.\n\n'+texto);}
+  };
+  $('ccClose').onclick=closeModal;
+}
 function abrirFormNuevoUsuario(){
   if(CU.role!=='owner')return;
   openModal('➕ Nuevo usuario',`
@@ -1993,8 +2007,7 @@ function abrirFormNuevoUsuario(){
       const uid=cred.user.uid;
       await sAuth.signOut();
       await db.collection('usuarios').doc(uid).set({email,name:nombre,role:rol,perms:[...RPERMS[rol]]});
-      closeModal();
-      alert(`✅ Usuario creado.\n\nComparte estos datos con la persona:\nCorreo: ${email}\nContraseña: ${pass}`);
+      mostrarCredencialesCreadas(email,pass);
     }catch(e){
       const code=e.code||'';
       const msg=code.includes('email-already-in-use')?'Ese correo ya está registrado':code.includes('invalid-email')?'Correo inválido':code.includes('weak-password')?'Contraseña muy débil (mínimo 6 caracteres)':'Error: '+e.message;
